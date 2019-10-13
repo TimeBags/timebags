@@ -1,8 +1,9 @@
 
 # MVP
 
-- button to select single file
-- from a generic file create asic-s with ots
+- button to select single file, then if it is a
+    - generic file: create asic-s with tst and ots
+    - asic-s file: add/verify tst, then add/verify/upgrade/prune ots
 
 ---
 
@@ -12,25 +13,26 @@
 
 - drag and drop area
 - button to select single file
-- tsa on/off
-- tsa credit (if set on, configured, and API available)
+- tst on/off (configured/unconfigured)
+- tst credit (if set on, configured, and API available)
 
 ## menu bar
 
 - file menu
-    - open (select single file to stamp - or upgrade/verify if it's asic-e/s)
+    - open (select single file to stamp - or upgrade/verify if it's asic-s)
     - quit
 - settings
     - ots (box to edit ots servers list and minimum number of promises)
     - btc (node address and port to local verify - or a list of block explorer)
-    - tsa (box to set url, user, pwd)
+    - tst (box to set url, user, pwd)
+    - opening (ots upgrade/prune, ask/auto/off)
 - about
 
 ---
 
 # Functions 1/2
 
-## ots and tsa
+## ots and tst
 
 - ots
     - stamp
@@ -42,36 +44,42 @@
     - verify
         - input: ots file
         - output: true | false
-- tsa
+- tst
     - stamp
         - input: non asic file
-        - output: tsr file
+        - output: tst file
     - verify
-        - input: tsr file
+        - input: tst file
         - output: true | false
 
 ---
 
-# Functions 1/2
+# Functions 2/2
 
 ## asic
 
-- create asic
-    - input: files, tsr, ots, xml 
-    - output: asic-e new file
-- detect asic
-    - input: file 
-    - output: status = asic-e | asic-s | zip | non zip
-- open asic
-    - input: asic-e/s
-    - actions: 
-        - verify tsr 
-        - verify/upgrade/prune ots
-        - apply missed tsr
-        - apply missed ots (also to tsr)
-    - output: 
-        - updated asic-e
-        - status of tsa and ots stamps found
-        - list of actions done:
-            - tsa and/or ots applied if absent
-            - ots upgraded and/or pruned if incomplete
+- asic-s create
+    - input/output: non asic-s file/asic-s new file
+    - actions:
+            - create asic-s structure
+            - add mimetype, tst, ots (to tst)
+            - zip (and set mimetype in archive comment)
+- asic-s update
+    - input/output: asic-s file old/verified+updated
+    - actions:
+            - extract
+            - apply/verify tst (asic-s could contain just signature)
+            - apply(to tst)/verify/upgrade/prune ots
+            - zip
+- asic-s check
+    - input: file
+    - output: true if asic-s | false if other (also asice-e or zip)
+- open
+    - input: file
+    - actions:
+        - if asic-s check is false: asic-s create
+        - else: asic-s update
+    - output:
+        - updated asic-s
+        - status/actions done on tst and ots
+
