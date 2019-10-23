@@ -22,15 +22,15 @@ def main(pathfile):
         if os.path.isfile(new_pathfile):
             print("File %s already exists!" % new_pathfile)
             return 1
-        else:
-            # create new_zip
-            print("Creating new zip file %s with dataobject: %s" % (new_pathfile, pathfile))
-            with zipfile.ZipFile(new_pathfile, mode='x') as new_zip:
-                new_zip.write(pathfile)
-                new_zip.close()
 
-            # validate new_zip
-            container = asic.ASiCS(new_pathfile)
+        # create new_zip
+        print("Creating new zip file %s with dataobject: %s" % (new_pathfile, pathfile))
+        with zipfile.ZipFile(new_pathfile, mode='x') as new_zip:
+            new_zip.write(pathfile)
+            new_zip.close()
+
+        # validate new_zip
+        container = asic.ASiCS(new_pathfile)
 
     # update the ASiC-S container or the new_zip container (becoming ASiC-S)
     return container.update()

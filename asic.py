@@ -40,7 +40,11 @@ mimetype with the string "mimetype=application/vnd.etsi.asic-s+zip"
 import os.path
 import zipfile
 import re
+import tst
+import ots
 
+
+TIMESTAMP = os.path.join("META-INF", "timestamp.tst")
 
 class ASiCS():
     ''' Class for managing ASiC-S files '''
@@ -49,11 +53,9 @@ class ASiCS():
         ''' Initialize ASiC-S container '''
 
         self.pathfile = pathfile
-        self.mimetype = False
-        self.tst = False
-        self.ots = False
         self.valid = False
-        self.comment = False
+        self.dataobject = None
+        self.status = ""
 
         # does file exist?
         if not os.path.isfile(self.pathfile):
@@ -63,10 +65,10 @@ class ASiCS():
         elif not zipfile.is_zipfile(self.pathfile):
             self.status = "%s is not a zip archive" % self.pathfile
         else:
-            self._validate()
+            self.validate()
 
 
-    def _validate(self):
+    def validate(self):
         ''' Check if file is a valid ASiC-S container '''
 
         n_dataobject = 0
@@ -76,59 +78,63 @@ class ASiCS():
             if container.testzip() is not None:
                 self.status = "%s is a corrupted zip archive" % self.pathfile
             else:
-                # read zipfile comment (if present do not change it)
-                if len(container.comment) > 0:
-                    self.comment = True
 
                 # asic-s validity check
                 for item in container.namelist():
 
-                    # timestamp presence
-                    if item == "META-INF/timestamp.tst":
-# TODO: test on win this slash "/" or adapt it to the current os
-                        self.tst = True
-
-                    # OpenTimestamp presence
-                    if item == "META-INF/timestamp.tst.ots":
-# TODO: test on win this slash "/" or adapt it to the current os
-                        self.ots = True
-
                     # ignore others meta-info files
-                    elif re.search('META-INF/.*$', item) is not None:
-# TODO: test on win this slash "/" or adapt it to the current os
+                    if re.search('META-INF/.*$', item) is not None:
+                    # TODO: test on win this slash "/" or adapt it to the current os
                         pass
 
                     # mimetype file does not count as a dataobject
                     elif item == "mimetype":
-                        self.mimetype = True
+                        pass
 
                     # count dataobjects
                     else:
                         n_dataobject += 1
+                        self.dataobject = item
 
 
         # a valid ASiC-S container must have exactly one dataobject
         if n_dataobject != 1:
-            self.status = "%s is not ASiC-S because has %d dataobject" % (self.pathfile, n_dataobject)
+            self.dataobject = None
+            self.valid = False
+            self.status = "%s is not ASiC-S because has %d dataobject" \
+                            % (self.pathfile, n_dataobject)
         else:
-            self.status = "%s is a good ASiC-S container!" % self.pathfile
             self.valid = True
-
-
-    def add_mimetype(self):
-        ''' Add mimetype labels to ASiC-S file only if are missed '''
-        with zipfile.ZipFile(self.pathfile, mode='a') as container:
-            if not self.mimetype:
-                container.writestr("mimetype", "application/vnd.etsi.asic-s+zip")
-            if not self.comment:
-                container.comment = "mimetype=application/vnd.etsi.asic-s+zip".encode()
-            container.close()
+            self.status = "%s is a good ASiC-S container!" % self.pathfile
 
 
     def update(self):
         '''  Update an ASiC-S file '''
+
         with zipfile.ZipFile(self.pathfile, mode='a') as container:
-            # TODO: add/verify tst and add/verify/upgrade/prune ots
+
+            # Add mimetype labels to ASiC-S file only if are missed
+            if "mimetype" not in container.namelist():
+                container.writestr("mimetype", "application/vnd.etsi.asic-s+zip")
+            if not container.comment:
+                container.comment = "mimetype=application/vnd.etsi.asic-s+zip".encode()
+
+            # add tst
+            if TIMESTAMP not in container.namelist():
+                with container.open(self.dataobject, mode='r') as data:
+                    token = tst.get_token(data.read())
+                container.writestr(TIMESTAMP, token)
+
+            # TODO: verify tst if it is already present
+
+            # TODO: add ots
+            if TIMESTAMP+".ots" not in container.namelist():
+                with container.open(TIMESTAMP, mode='r') as data:
+                    ots_token = ots.get_token(data.read())
+                container.writestr(TIMESTAMP+".ots", ots_token)
+
+            # TODO: verify/upgrade/prune ots
+
             container.close()
-        self.add_mimetype()
+
         return 0
