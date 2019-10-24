@@ -12,7 +12,9 @@ curl -o tsa.crt https://freetsa.org/files/tsa.crt
 
 curl -o cacert.pem https://freetsa.org/files/cacert.pem
 
-openssl ts -verify -in file.tsr -data data.txt -CAfile cacert.pem -untrusted tsa.crt
+openssl ts -reply -in timestamp.tst -token_in -text
+
+openssl ts -verify -in timestamp.tst -data data.txt -CAfile cacert.pem -untrusted tsa.crt
 '''
 
 from os import urandom
@@ -23,6 +25,8 @@ from rfc3161ng import RemoteTimestamper
 def get_token(data):
     ''' Call a Remote TimeStamper to obtain a ts token of data '''
 
+    # TBD: read timestamper data from a list of providers
+    #      the list is read from config and cli params
     url = "https://freetsa.org/tsr"
     tsafile = "freetsa.crt"
     cafile = None
@@ -38,21 +42,16 @@ def get_token(data):
                                     username=username, password=password,
                                     include_tsa_certificate=include_tsa_cert)
     nonce = unpack('<q', urandom(8))[0]
-    return timestamper.timestamp(data=data, nonce=nonce)
 
-#with open(dataobject, "rb") as data_file:
-#    nonce = unpack('<q', urandom(8))[0]
-#    tst = timestamper.timestamp(data=data_file.read(), nonce=nonce)
+    # TODO: manage failure, try/except
+    #       repeat on the next provider in case of failure
+    tst = timestamper.timestamp(data=data, nonce=nonce)
 
-#with open(tst_file, "wb") as tst_der:
-#    tst_der.write(tst)
+    #       return ok/ko
+    #       return time: rfc3161ng.get_timestamp(tst)
+    return tst
 
-#with open(tst_file, "rb") as tst_der:
-#    tst = tst_der.read()
-#    print(rfc3161ng.get_timestamp(tst))
-#rt.check(tst, data=data_file.read())
-
-# openssl ts -reply -in timestamp.tst -token_in -text
-
-# openssl ts -verify -in timestamp.tst -token_in -CAfile cacert.pem
-# -untrusted tsa.crt -data data.txt
+# def verify_token(data):
+# verify calling remote timestamper?
+#
+# timestamper.check(tst, data)
