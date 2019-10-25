@@ -10,6 +10,11 @@ import asic
 def main(pathfile):
     ''' Main '''
 
+    # does file exist?
+    if not os.path.isfile(pathfile):
+        print("%s is not a file" % pathfile)
+        return 1
+
     container = asic.ASiCS(pathfile)
     while not container.valid:
         print(container.status)

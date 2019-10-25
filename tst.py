@@ -19,36 +19,51 @@ openssl ts -verify -in timestamp.tst -data data.txt -CAfile cacert.pem -untruste
 
 from os import urandom
 from struct import unpack
-from rfc3161ng import RemoteTimestamper
+from rfc3161ng import RemoteTimestamper, get_timestamp
 
 
 def get_token(data):
     ''' Call a Remote TimeStamper to obtain a ts token of data '''
 
-    # TBD: read timestamper data from a list of providers
-    #      the list is read from config and cli params
-    url = "https://freetsa.org/tsr"
-    tsafile = "freetsa.crt"
-    cafile = None
-    username = None
-    password = None
-    timeout = 10
-    hashname = 'sha256'
-    include_tsa_cert = True
+    # TBD: read the list from a config file and append cli params
+    tsa_list = [{
+        'url' : "https://freetsa.org/tsrx",
+        'tsafile' : "freetsa.crt",
+        'cafile' : None,
+        'username' : None,
+        'password' : None,
+        'timeout' : 10,
+        'hashname' : 'sha256',
+        'include_tsa_cert' : True
+    }, {
+        'url' : "https://freetsa.org/tsr",
+        'tsafile' : "freetsa.crt",
+        'cafile' : None,
+        'username' : None,
+        'password' : None,
+        'timeout' : 10,
+        'hashname' : 'sha256',
+        'include_tsa_cert' : True
+    }]
 
-    certificate = open(tsafile, "rb").read()
-    timestamper = RemoteTimestamper(url, certificate=certificate, cafile=cafile,
-                                    hashname=hashname, timeout=timeout,
-                                    username=username, password=password,
-                                    include_tsa_certificate=include_tsa_cert)
-    nonce = unpack('<q', urandom(8))[0]
+    for tsa in tsa_list:
+        certificate = open(tsa['tsafile'], 'rb').read()
+        timestamper = RemoteTimestamper(tsa['url'], certificate=certificate, cafile=tsa['cafile'],
+                                        hashname=tsa['hashname'], timeout=tsa['timeout'],
+                                        username=tsa['username'], password=tsa['password'],
+                                        include_tsa_certificate=tsa['include_tsa_cert'])
+        nonce = unpack('<q', urandom(8))[0]
 
-    # TODO: manage failure, try/except
-    #       repeat on the next provider in case of failure
-    tst = timestamper.timestamp(data=data, nonce=nonce)
+        try:
+            tst = timestamper.timestamp(data=data, nonce=nonce)
+        except RuntimeError:
+            tst = None
 
-    #       return ok/ko
-    #       return time: rfc3161ng.get_timestamp(tst)
+    if tst is not None:
+        print("TSA %s timestamped dataobject at: %s" % (tsa['url'], get_timestamp(tst)))
+    else:
+        print("ERROR: none of the tsa provided a timestamp")
+
     return tst
 
 # def verify_token(data):

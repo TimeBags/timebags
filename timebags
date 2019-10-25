@@ -16,7 +16,9 @@ def main():
         ret = gui.main()
     elif len(sys.argv) > 1:
         ret = cli.main(sys.argv[1])
-    return ret
+    if ret:
+        return 0
+    return 1
 
 
 if __name__ == '__main__':
