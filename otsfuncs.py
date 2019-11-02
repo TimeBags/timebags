@@ -86,19 +86,27 @@ def submit_async(calendar_url, msg, q, timeout):
     t.start()
 
 
-def ots_stamp(file_name):
+def ots_stamp(file_list):
 
-    with open(file_name, 'xb') as file_handler:
-        try:
-            file_timestamp = DetachedTimestampFile.from_fd(OpSHA256(), file_handler)
-        except OSError as exp:
-            logging.error("Could not read %r: %s" % (file_name, exp))
-            sys.exit(1)
+    merkle_roots = []
+    file_timestamps = []
 
-    # nonce
-    nonce_appended_stamp = file_timestamp.timestamp.ops.add(OpAppend(os.urandom(16)))
-    merkle_root = nonce_appended_stamp.ops.add(OpSHA256())
-    merkle_tip = make_merkle_tree(merkle_root)
+    for file_name in file_list:
+        with open(file_name, 'rb') as file_handler:
+            try:
+                file_timestamp = DetachedTimestampFile.from_fd(OpSHA256(), file_handler)
+            except OSError as exp:
+                logging.error("Could not read %r: %s" % (file_name, exp))
+                sys.exit(1)
+
+        # nonce
+        nonce_appended_stamp = file_timestamp.timestamp.ops.add(OpAppend(os.urandom(16)))
+        merkle_root = nonce_appended_stamp.ops.add(OpSHA256())
+
+        merkle_roots.append(merkle_root)
+        file_timestamps.append(file_timestamp)
+
+    merkle_tip = make_merkle_tree(merkle_roots)
 
     calendar_urls = []
     calendar_urls.append('https://a.pool.opentimestamps.org')
@@ -108,13 +116,14 @@ def ots_stamp(file_name):
 
     create_timestamp(merkle_tip, calendar_urls)
 
-    timestamp_file_path = file_name + '.ots'
-    try:
-        with open(timestamp_file_path, 'xb') as timestamp_fd:
-            ctx = StreamSerializationContext(timestamp_fd)
-            file_timestamp.serialize(ctx)
-    except IOError as exp:
-        logging.error("Failed to create timestamp %r: %s" % (timestamp_file_path, exp))
-        sys.exit(1)
+    for (file_name, file_timestamp) in zip(file_list, file_timestamps):
+        timestamp_file_path = file_name + '.ots'
+        try:
+            with open(timestamp_file_path, 'xb') as timestamp_fd:
+                ctx = StreamSerializationContext(timestamp_fd)
+                file_timestamp.serialize(ctx)
+        except IOError as exp:
+            logging.error("Failed to create timestamp %r: %s" % (timestamp_file_path, exp))
+            sys.exit(1)
 
-ots_stamp(sys.argv[1])
+ots_stamp(sys.argv[1:])
