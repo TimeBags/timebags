@@ -129,18 +129,7 @@ class ASiCS():
 
             if TIMESTAMP in container.namelist():
                 # if tst is present, then move on adding ots
-                if TIMESTAMP_OTS not in container.namelist():
-                    with container.open(TIMESTAMP, mode='r') as data:
-                        ots_token = ots.get_token(data.read())
-                        if ots_token is not None:
-                            container.writestr(TIMESTAMP_OTS, ots_token)
-                else:
-                    pass
-                    # TODO: try to upgrade ots if incomplete
-
-                    # TBD: try to prune ots if complete
-
-                    # TBD: verify ots
+                ots.tokens(container, self.dataobject, TIMESTAMP)
 
             container.close()
             return bool(TIMESTAMP in container.namelist() and TIMESTAMP_OTS in container.namelist())
