@@ -12,10 +12,13 @@ import cli
 def main():
     ''' Main '''
 
+    # TBD: it's better to have timebags-qt and timebags-cli and check sys.argv[0],
+    #      but how to do with pyinstaller and AppImage?
     if len(sys.argv) == 1:
+        # TBD: check an option like --gui
         ret = gui.main()
     elif len(sys.argv) > 1:
-        ret = cli.main(sys.argv[1])
+        ret = cli.main(sys.argv[1:])
     if ret:
         return 0
     return 1

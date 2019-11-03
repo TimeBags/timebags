@@ -58,7 +58,6 @@ class ASiCS():
         self.dataobject = None
         self.status = ""
 
-        # is it a zipfile?
         if not zipfile.is_zipfile(self.pathfile):
             self.status = "%s is not a zip archive" % self.pathfile
         else:
