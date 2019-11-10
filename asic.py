@@ -77,10 +77,8 @@ class ASiCS():
 
                 # asic-s validity check
                 for item in container.namelist():
-
-                    # mimetype, timestamp files tst/ots and META-INF dir
-                    # do not count as dataobjects
-                    if item in (TIMESTAMP, TIMESTAMP_OTS, METAINF_DIR, "mimetype"):
+                    # mimetype and META-INF dir structure do not count as dataobjects
+                    if item == "mimetype" or item.startswith(METAINF_DIR):
                         pass
 
                     # we shall count any other file as a dataobject because any
@@ -128,7 +126,7 @@ class ASiCS():
             #       A trusted copy of the root CA certificate is needed too.
 
             if TIMESTAMP in container.namelist():
-                # if tst is present, then move on adding ots
+                # if tst is present then move on adding or upgrading ots
                 ots.tokens(container, self.dataobject, TIMESTAMP)
 
             container.close()
