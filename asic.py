@@ -95,7 +95,7 @@ class ASiCS():
                     # mimetype does not count as dataobject
                     if item == "mimetype":
                         with container.open("mimetype", mode='r') as mime_type:
-                            self.mimetype = mime_type.read().decode()
+                            self.mimetype = mime_type.read().decode().rstrip('\n')
                         continue
 
                     # META-INF dir structure does not count as dataobject
@@ -110,20 +110,20 @@ class ASiCS():
                     else:
                         self.dataobject = None
 
-        if n_dataobject != 1:
-            # a valid ASiC-S container must have exactly one dataobject
-            # if ASiC-S contains detached signatures or META-INF files
-            # then it is better timestamping the ASiC-S as a dataobject
-            self.status = "%s will be encapsulated because it has %d dataobjects" \
-                            % (self.pathfile, n_dataobject)
-        elif self.mimetype not in ("", MIMETYPE):
-            # zip files with mimetype other then asic-s should not be modified
-            # but used as dataobject in a fresh asic-s zip file
-            self.status = "%s will be encapsulated because it has a mimetype not ASiC-S: %s" \
-                            % (self.pathfile, self.mimetype)
-        else:
-            self.valid = True
-            self.status = "%s can be updated as a simple ASiC-S container" % self.pathfile
+                if n_dataobject != 1:
+                    # a valid ASiC-S container must have exactly one dataobject
+                    # if ASiC-S contains detached signatures or META-INF files
+                    # then it is better timestamping the ASiC-S as a dataobject
+                    self.status = "%s will be encapsulated because it has %d dataobjects" \
+                                    % (self.pathfile, n_dataobject)
+                elif self.mimetype not in ("", MIMETYPE):
+                    # zip files with mimetype other then asic-s should not be modified
+                    # but used as dataobject in a fresh asic-s zip file
+                    self.status = "%s will be encapsulated because it has a mimetype not ASiC-S: %s" \
+                                    % (self.pathfile, self.mimetype)
+                else:
+                    self.valid = True
+                    self.status = "%s can be updated as a simple ASiC-S container" % self.pathfile
 
 
     def update(self):
