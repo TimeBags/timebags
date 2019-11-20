@@ -20,15 +20,16 @@ import tempfile
 import asic
 
 
-def main(pathfiles):
-    ''' Main '''
+def there_can_be_only_one(pathfiles):
+    ''' asic-s MUST have a single dataobject '''
 
-    # do files exist?
+    # sanity check: do files exist?
     for name in pathfiles:
         if not os.path.exists(name):
             print("%s is not a file" % name)
-            return 1
+            return None
 
+    # if only one, MUST be a "regular file"
     if len(pathfiles) == 1 and os.path.isfile(pathfiles[0]):
         pathfile = pathfiles[0]
 
@@ -36,10 +37,10 @@ def main(pathfiles):
         # create a timebag.zip (default name) asic compliant
         pathfile = "timebag.zip"
         number = 0
-        while os.path.isfile(pathfile):
+        while os.path.exists(pathfile):
             # if file exist increment number suffix
             number += 1
-            pathfile = "timebag" + str(number) + ".zip"
+            pathfile = "timebag_" + str(number) + ".zip"
 
         with zipfile.ZipFile(pathfile, mode='x') as timebag_zip:
             # put inside timebag.zip a dataobject.zip with all that stuff
@@ -60,6 +61,16 @@ def main(pathfiles):
                     dataobject_zip.close()
                 timebag_zip.write(dataobject_path, os.path.basename(dataobject_path))
             timebag_zip.close()
+
+    return pathfile
+
+
+def main(pathfiles):
+    ''' Main '''
+
+    pathfile = there_can_be_only_one(pathfiles)
+    if pathfile is None:
+        return False
 
     container = asic.ASiCS(pathfile)
     while not container.valid:
