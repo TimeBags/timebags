@@ -26,8 +26,8 @@ class TestAsic(unittest.TestCase):
     def test_asics_valid(self):
         ''' Test asic-s valid files '''
 
-        print("asic-s valid files")
-        for filename in glob(path.join("tests", "asics_valid_*.zip")):
+        print("\nTesting asic-s valid files")
+        for filename in sorted(glob(path.join("tests", "asics_valid_*.zip"))):
             container = asic.ASiCS(filename)
             print(filename)
             print("- valid: %s" % str(container.valid))
@@ -38,8 +38,8 @@ class TestAsic(unittest.TestCase):
     def test_asics_notvalid(self):
         ''' Test asic-s NOT valid files '''
 
-        print("asic-s NOT valid files")
-        for filename in glob(path.join("tests", "asics_notvalid_*.zip")):
+        print("\nTesting: asic-s NOT valid files")
+        for filename in sorted(glob(path.join("tests", "asics_notvalid_*.zip"))):
             container = asic.ASiCS(filename)
             print(filename)
             print("- valid: %s" % str(container.valid))

@@ -1,0 +1,22 @@
+
+Testing: asic-s NOT valid files
+tests/asics_notvalid_01.zip
+- valid: False
+- status: tests/asics_notvalid_01.zip will be encapsulated because it has a mimetype not ASiC-S: application/zip
+tests/asics_notvalid_02.zip
+- valid: False
+- status: tests/asics_notvalid_02.zip will be encapsulated because it has 2 dataobjects
+tests/asics_notvalid_03.zip
+- valid: False
+- status: tests/asics_notvalid_03.zip is a corrupted zip archive
+tests/asics_notvalid_04.zip
+- valid: False
+- status: tests/asics_notvalid_04.zip is not a zip archive
+
+Testing asic-s valid files
+tests/asics_valid_01.zip
+- valid: True
+- status: tests/asics_valid_01.zip can be updated as a simple ASiC-S container
+tests/asics_valid_02.zip
+- valid: True
+- status: tests/asics_valid_02.zip can be updated as a simple ASiC-S container
