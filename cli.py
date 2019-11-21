@@ -31,7 +31,7 @@ def there_can_be_only_one(pathfiles):
 
     # if only one, MUST be a "regular file"
     if len(pathfiles) == 1 and os.path.isfile(pathfiles[0]):
-        pathfile = pathfiles[0]
+        pathfile = os.path.basename(pathfiles[0])
 
     else:
         # create a timebag.zip (default name) asic compliant
@@ -69,7 +69,12 @@ def main(pathfiles):
     ''' Main '''
 
     pathfile = there_can_be_only_one(pathfiles)
-    if pathfile is None:
+    if not pathfile:
+        print("Error: params [%s] are not regular files!" % pathfiles)
+        return False
+
+    if os.stat(pathfile).st_size == 0:
+        print("Error: file %s is empty!" % pathfile)
         return False
 
     container = asic.ASiCS(pathfile)
@@ -82,8 +87,8 @@ def main(pathfiles):
 
         # check if already exists
         if os.path.isfile(new_pathfile):
-            print("File %s already exists!" % new_pathfile)
-            return 1
+            print("Error: File %s already exists!" % new_pathfile)
+            return False
 
         # create new_zip
         print("Creating new zip file %s with dataobject: %s" % (new_pathfile, pathfile))
