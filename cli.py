@@ -26,15 +26,16 @@ def there_can_be_only_one(pathfiles):
     # sanity check: do files exist?
     for name in pathfiles:
         if not os.path.exists(name):
-            print("%s is not a file" % name)
+            print("Error: %s is not a file" % name)
             return None
 
     # if only one, MUST be a "regular file"
+    # FIXME: isfile does not detect special device files like /dev/ttyS0?
     if len(pathfiles) == 1 and os.path.isfile(pathfiles[0]):
         pathfile = os.path.basename(pathfiles[0])
 
     else:
-        # create a timebag.zip (default name) asic compliant
+        # create a timebag.zip (default name)
         pathfile = "timebag.zip"
         number = 0
         while os.path.exists(pathfile):
@@ -55,7 +56,11 @@ def there_can_be_only_one(pathfiles):
                             dataobject_zip.write(name)
                         elif os.path.isdir(name):
                             for root, dirs, files in os.walk(name):
+                                if not files:
+                                    print("Error: no files to put inside dataobject!")
+                                    return None
                                 for leaf in files:
+                                    print("Adding %s inside dataobject" % leaf)
                                     dataobject_zip.write(os.path.join(root, leaf))
 
                     dataobject_zip.close()
@@ -70,7 +75,7 @@ def main(pathfiles):
 
     pathfile = there_can_be_only_one(pathfiles)
     if not pathfile:
-        print("Error: params [%s] are not regular files!" % pathfiles)
+        print("Error: params (%s) are not all regular files!" % pathfiles)
         return False
 
     if os.stat(pathfile).st_size == 0:
