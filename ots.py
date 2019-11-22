@@ -56,12 +56,10 @@ def tokens(zip_handler, dataobject_name, tst_name):
             tst.write(zip_handler.read(tst_name))
 
         # ots of dataobject
-        ots_dataobject_name = dataobject_name + ".ots"
-        ots_dataobject_path = dataobject_path + ".ots"
-        zip_ots_dataobject_name = os.path.join("META-INF", ots_dataobject_name)
+        zip_ots_dataobject_name = os.path.join("META-INF", dataobject_name + ".ots")
         if zip_ots_dataobject_name in zip_handler.namelist():
             # if exist extract
-            with open(ots_dataobject_path, 'xb') as ots_dataobject:
+            with open(dataobject_path + ".ots", 'xb') as ots_dataobject:
                 ots_dataobject.write(zip_handler.read(zip_ots_dataobject_name))
             # TODO: upgrade, prune, verify
         else:
@@ -86,8 +84,8 @@ def tokens(zip_handler, dataobject_name, tst_name):
             print(stamp_list)
             ots_cmd(stamp_list)
 
-        # add into zip if missing
+        # add into zip what is missing
         if zip_ots_dataobject_name not in zip_handler.namelist():
-            zip_handler.write(ots_dataobject_path, zip_ots_dataobject_name)
+            zip_handler.write(dataobject_path + ".ots", zip_ots_dataobject_name)
         if ots_tst_name not in zip_handler.namelist():
             zip_handler.write(ots_tst_path, ots_tst_name)

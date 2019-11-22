@@ -29,7 +29,7 @@ class TestAsic(unittest.TestCase):
     def test_asics_valid(self):
         ''' Test asic-s valid files '''
 
-        print("\nTesting asic-s valid files")
+        print("\nTesting asic-s valid files asics_valid_*.zip")
         for filename in sorted(glob(os.path.join("tests", "asics_valid_*.zip"))):
             container = asic.ASiCS(filename)
             print(filename)
@@ -41,7 +41,7 @@ class TestAsic(unittest.TestCase):
     def test_asics_notvalid(self):
         ''' Test asic-s NOT valid files '''
 
-        print("\nTesting: asic-s NOT valid files")
+        print("\nTesting: asic-s NOT valid files asics_notvalid_*.zip")
         for filename in sorted(glob(os.path.join("tests", "asics_notvalid_*.zip"))):
             container = asic.ASiCS(filename)
             print(filename)
@@ -54,13 +54,11 @@ class TestMain(unittest.TestCase):
     ''' Test Main module '''
 
     def test_m1_tcboo_one(self):
-        ''' Test a regular file (Readme.md) as single param '''
+        ''' Test a regular file as single param '''
 
-        print("\nTesting: one regular file (Readme.md) as single param")
         name = "Readme.md"
-        if not os.path.exists(name):
-            print("Cannot execute test because file %s does not exist!" % name)
-            self.assertFalse(True)
+        print("\nTesting: regular file (%s) as single param" % name)
+        self.assertTrue(os.path.exists(name))
         file_result = there_can_be_only_one([name])
         print("Result of there_can_be_only_one(): %s" % file_result)
         self.assertTrue(file_result == name)
@@ -68,11 +66,9 @@ class TestMain(unittest.TestCase):
     def test__m2_tcboo_none(self):
         ''' Test a non-existent file as single param '''
 
-        print("\nTesting: non-existent file as single param")
         name = next(tempfile._get_candidate_names())
-        if os.path.exists(name):
-            print("Cannot execute test because file %s exists!" % name)
-            self.assertFalse(True)
+        print("\nTesting: non-existent file %s as single param" % name)
+        self.assertFalse(os.path.exists(name))
         file_result = there_can_be_only_one([name])
         print("Result of there_can_be_only_one(): %s" % file_result)
         self.assertTrue(file_result is None)
@@ -80,11 +76,9 @@ class TestMain(unittest.TestCase):
     def test_m3_tcboo_dir(self):
         ''' Test a dir (not a regular file) as single param '''
 
-        print("\nTesting: dir as single param")
         name = "tests"
-        if not os.path.isdir(name):
-            print("Cannot execute test because %s is not a directory!" % name)
-            self.assertFalse(True)
+        print("\nTesting: dir %s as single param" % name)
+        self.assertTrue(os.path.isdir(name))
         file_result = there_can_be_only_one([name])
         print("Result of there_can_be_only_one(): %s" % file_result)
         self.assertTrue(os.path.exists(file_result))
@@ -97,11 +91,9 @@ class TestMain(unittest.TestCase):
     def test_m4_tcboo_files(self):
         ''' Test a list of files as param '''
 
-        print("\nTesting: list of files as param")
         names = glob(os.path.join("*.py"))
-        if len(names) < 2:
-            print("Cannot execute test because *.py does not match more then one file!")
-            self.assertFalse(True)
+        print("\nTesting: list of files (%s) as param" % names)
+        self.assertFalse(len(names) < 2)
         file_result = there_can_be_only_one(names)
         print("Result of there_can_be_only_one(): %s" % file_result)
         self.assertTrue(os.path.exists(file_result))
@@ -111,12 +103,62 @@ class TestMain(unittest.TestCase):
         # cleaning
         os.remove(file_result)
 
+    def test_m5_tcboo_one_empty(self):
+        ''' Test one empty file as param '''
 
-'''
-    def tcboo_many(self)
-        file_result = there_can_be_only_one(glob(path.join("*.py")))
-'''
+        name = os.path.join("tests", "empty", "data1")
+        print("\nTesting: empty file %s as param" % name)
+        self.assertTrue(os.path.isfile(name))
+        self.assertFalse(there_can_be_only_one([name]))
+
+    def test_m6_tcboo_two_empty(self):
+        ''' Test two empty files as param '''
+
+        names = glob(os.path.join("tests", "empty", "data*"))
+        print("\nTesting: empty files (%s) as params" % names)
+        self.assertFalse(len(names) is not 2)
+        for name in names:
+            self.assertTrue(os.path.isfile(name))
+        self.assertFalse(there_can_be_only_one(names))
+
+    def test_m7_tcboo_dir_of_empty(self):
+        ''' Test a dir of empty files as param '''
+
+        name = os.path.join("tests", "empty")
+        print("\nTesting: dir of empty files (%s) as param" % name)
+        self.assertTrue(os.path.isdir(name))
+        self.assertFalse(there_can_be_only_one([name]))
+
+
+    def test_m8_tcboo_one_empty(self):
+        ''' Test one special file as param '''
+
+        name = os.path.join(os.sep, "dev", "tty")
+        print("\nTesting: special file %s as param" % name)
+        self.assertTrue(os.path.exists(name))
+        self.assertFalse(os.path.isfile(name))
+        self.assertFalse(there_can_be_only_one([name]))
+
+    def test_m6_tcboo_two_empty(self):
+        ''' Test many special files as param '''
+
+        names = glob(os.path.join(os.sep, "dev", "tty?1"))
+        print("\nTesting: special files (%s) as params" % names)
+        self.assertFalse(len(names) < 2)
+        for name in names:
+            self.assertTrue(os.path.exists(name))
+            self.assertFalse(os.path.isfile(name))
+        self.assertFalse(there_can_be_only_one(names))
+
+    def test_m7_tcboo_dir_of_empty(self):
+        ''' Test a dir of special files as param '''
+
+        name = os.path.join(os.sep, "dev")
+        print("\nTesting: dir of special files (%s) as param" % name)
+        self.assertTrue(os.path.isdir(name))
+        self.assertFalse(there_can_be_only_one([name]))
+
+
 
 if __name__ == '__main__':
     unittest.main()
-
