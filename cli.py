@@ -66,29 +66,29 @@ def there_can_be_only_one(pathfiles):
 
                     for name in pathfiles:
                         if os.path.isfile(name):
-                            if os.stat(name).st_size == 0:
-                                print("Skip empty file %s" % name)
-                            else:
-                                try:
+                            try:
+                                if os.stat(name).st_size == 0:
+                                    print("Skip empty file %s" % name)
+                                else:
                                     dataobject_zip.write(name)
                                     print("Added %s inside dataobject" % name)
                                     counter += 1 # one more file stored
-                                except Exception as err:
-                                    print("Failed to add %s inside dataobject, err=%s" % (name, err))
+                            except Exception as err:
+                                print("Failed to add %s inside dataobject, err=%s" % (name, err))
                         elif os.path.isdir(name):
                             for root, dirs, files in os.walk(name):
                                 for leaf in files:
-                                    if os.stat(os.path.join(root, leaf)).st_size == 0:
-                                        print("Skip empty file %s" % os.path.join(root, leaf))
-                                    elif os.path.isfile(os.path.join(root, leaf)):
-                                        try:
+                                    try:
+                                        if os.stat(os.path.join(root, leaf)).st_size == 0:
+                                            print("Skip empty file %s" % os.path.join(root, leaf))
+                                        elif os.path.isfile(os.path.join(root, leaf)):
                                             dataobject_zip.write(os.path.join(root, leaf))
                                             print("Added %s inside dataobject" % os.path.join(root, leaf))
                                             counter += 1
-                                        except Exception as err:
-                                            print("Failed to add %s inside dataobject, err=%s" % (os.path.join(root, leaf), err))
-                                    else:
-                                        print("Skip non regular file %s" % os.path.join(root, leaf))
+                                        else:
+                                            print("Skip non regular file %s" % os.path.join(root, leaf))
+                                    except Exception as err:
+                                        print("Failed to add %s inside dataobject, err=%s" % (os.path.join(root, leaf), err))
                         else:
                             print("Skip non regular file %s" % name)
 

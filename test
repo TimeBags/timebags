@@ -171,6 +171,14 @@ class TestMain(unittest.TestCase):
         self.assertTrue(os.path.isdir(name))
         self.assertFalse(there_can_be_only_one([name]))
 
+    def test_m11_tcboo_permitted(self):
+        ''' Test not permitted files '''
+
+        name = os.path.join(os.sep, "proc", "1")
+        print("\nTesting: not permitted files (%s) as param" % name)
+        self.assertTrue(os.path.isdir(name))
+        self.assertFalse(there_can_be_only_one([name]))
+
 
 
 if __name__ == '__main__':
