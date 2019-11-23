@@ -20,89 +20,110 @@ import tempfile
 import asic
 
 
-def there_can_be_only_one(pathfiles):
+def add_to_zip(fh_zip, name, arcname=None):
+    ''' try adding a file to the zip archive '''
+
+    try:
+        if os.stat(name).st_size == 0:
+            # FIXME: should raise exception
+            print("Skip empty file %s" % name)
+            return False
+        elif os.path.isfile(name):
+            fh_zip.write(name, arcname=arcname)
+            print("Zip %s" % name)
+            return True
+        else:
+            # FIXME: should raise exception
+            print("Skip non regular file %s" % name)
+            return False
+    except OSError as err:
+        print("Failed to zip %s, error=%s" % (name, err))
+        return False
+
+def create_zip(path_zip, path_files):
+    ''' zip files '''
+
+    with zipfile.ZipFile(path_zip, mode='x') as fh_zip:
+
+        counter = 0
+        for name in path_files:
+
+            if os.path.isdir(name):
+                for root, _, files in os.walk(name):
+                    for leaf in files:
+                        path_leaf = os.path.join(root, leaf)
+                        if add_to_zip(fh_zip, path_leaf):
+                            counter += 1 # one more file stored
+                        else:
+                            counter = 0
+                            break
+
+            elif add_to_zip(fh_zip, name):
+                counter += 1 # one more file stored
+            else:
+                counter = 0
+                break
+
+
+    # check if there is some file stored
+    if counter == 0:
+        print("Error: not valid file found!")
+        os.remove(path_zip)
+        return False
+    return True
+
+
+def there_can_be_only_one(pathfiles, pathzip=None):
     ''' asic-s MUST have a single dataobject '''
 
-    # sanity check: do files exist?
-    for name in pathfiles:
-        if not os.path.exists(name):
-            print("Error: %s is not a file" % name)
-            return None
 
-
-    # if only one, MUST be a "regular file"
-    # FIXME: isfile does not detect special device files like /dev/ttyS0?
-    if len(pathfiles) == 1 and os.path.isfile(pathfiles[0]):
-
-        if os.stat(pathfiles[0]).st_size == 0:
-            print("Error: file %s is empty!" % pathfiles[0])
-            pathfile = None
+    # if zipfile name is not provided build it
+    if not pathzip:
+        if len(pathfiles) == 1 and not os.path.isdir(pathfiles[0]):
+            # use file name as the zip prefix
+            prefix = os.path.basename(pathfiles[0])
         else:
-            pathfile = pathfiles[0]
+            # FIXME: when invoked by GUI the user has to be asked for the path
+            # use "timebag" as default prefix
+            prefix = "timebag"
 
+        pathzip = prefix + ".zip"
 
-    else:
-        counter = 0 # initialize number of valid files to store
-
-        # create a timebag.zip (default name)
-        # FIXME: when invoked by GUI the user has to be asked for the path
-        pathfile = "timebag.zip"
-
-        # check if already exists
+        # now check if this name already exists
         name_number = 0
-        while os.path.exists(pathfile):
-            # if file exist increment number suffix
+        while os.path.exists(pathzip):
+            # if file exists, then increment number suffix
             name_number += 1
-            pathfile = "timebag_" + str(name_number) + ".zip"
+            pathzip = prefix + "_" + str(name_number) + ".zip"
 
-        # create an asic-s
-        with zipfile.ZipFile(pathfile, mode='x') as timebag_zip:
-            # put inside timebag.zip a dataobject.zip with all that stuff
-            print("Creating new zip file %s with dataobject.zip inside" % pathfile)
+    elif os.path.exists(pathzip):
+        # FIXME: this check could be moved to args check
+        print("Error: zipfile name provided already exists: %s" % pathzip)
+        return None
 
+    # create the asic-s zip
+    with zipfile.ZipFile(pathzip, mode='x') as timebag_zip:
+        print("Creating new asic-s file %s" % pathzip)
+
+        if len(pathfiles) == 1 and not os.path.isdir(pathfiles[0]):
+            # put inside the asic-s zip the single file
+            result = add_to_zip(timebag_zip, pathfiles[0], os.path.basename(pathfiles[0]))
+
+        else:
+            # put inside the asic-s zip a dataobject.zip with all that stuff
             with tempfile.TemporaryDirectory() as tmpdir:
                 dataobject_path = os.path.join(tmpdir, "dataobject.zip")
-                with zipfile.ZipFile(dataobject_path, mode='x') as dataobject_zip:
+                result = create_zip(dataobject_path, pathfiles)
+                if result:
+                    result = add_to_zip(timebag_zip, dataobject_path, os.path.basename(dataobject_path))
 
-                    for name in pathfiles:
-                        if os.path.isfile(name):
-                            try:
-                                if os.stat(name).st_size == 0:
-                                    print("Skip empty file %s" % name)
-                                else:
-                                    dataobject_zip.write(name)
-                                    print("Added %s inside dataobject" % name)
-                                    counter += 1 # one more file stored
-                            except Exception as err:
-                                print("Failed to add %s inside dataobject, err=%s" % (name, err))
-                        elif os.path.isdir(name):
-                            for root, dirs, files in os.walk(name):
-                                for leaf in files:
-                                    try:
-                                        if os.stat(os.path.join(root, leaf)).st_size == 0:
-                                            print("Skip empty file %s" % os.path.join(root, leaf))
-                                        elif os.path.isfile(os.path.join(root, leaf)):
-                                            dataobject_zip.write(os.path.join(root, leaf))
-                                            print("Added %s inside dataobject" % os.path.join(root, leaf))
-                                            counter += 1
-                                        else:
-                                            print("Skip non regular file %s" % os.path.join(root, leaf))
-                                    except Exception as err:
-                                        print("Failed to add %s inside dataobject, err=%s" % (os.path.join(root, leaf), err))
-                        else:
-                            print("Skip non regular file %s" % name)
+    # remove filezip if creation failed
+    if not result:
+        os.remove(pathzip)
+        print("Error: valid file not found in params (%s)" % pathfiles)
+        return None
 
-                    dataobject_zip.close()
-                timebag_zip.write(dataobject_path, os.path.basename(dataobject_path))
-            timebag_zip.close()
-
-        # check if there is some file stored
-        if counter == 0:
-            print("Error: no files to put inside dataobject!")
-            os.remove(pathfile)
-            pathfile = None
-
-    return pathfile
+    return pathzip
 
 
 def main(pathfiles):
@@ -110,39 +131,8 @@ def main(pathfiles):
 
     # if there are more then one param, create a zip with a single dataobject containing them
     pathfile = there_can_be_only_one(pathfiles)
-    if not pathfile:
-        print("Error: valid file not found in params (%s)" % pathfiles)
-        return False
+    if pathfile:
 
-    # check if file is already a vaid asic-s
-    container = asic.ASiCS(pathfile)
-
-    while not container.valid:
-
-        # the file is not a zip archive compliant with ASiC-S requirements
-        print(container.status)
-
-        # create a new zip_file using the original as a dataobject
-        new_pathfile = pathfile + ".zip"
-
-        # check if already exists
-        name_number = 0
-        while os.path.exists(new_pathfile):
-            # if file exist increment number suffix
-            name_number += 1
-            new_pathfile = pathfile + "." + str(name_number) + ".zip"
-
-        # create an asic-s
-        print("Creating new zip file %s with dataobject: %s" % (new_pathfile, pathfile))
-        with zipfile.ZipFile(new_pathfile, mode='x') as new_zip:
-            try:
-                new_zip.write(pathfile, os.path.basename(pathfile))
-            except Exception as err:
-                print("Failed to zip dataobject %s, err=%s" % (pathfile, err))
-            new_zip.close()
-
-        # validate the asic-s
-        container = asic.ASiCS(new_pathfile)
-
-    # complete the ASiC-S container or the new_zip container (becoming ASiC-S)
-    return container.complete()
+        # complete the zip container and get an ASiC-S
+        container = asic.ASiCS(pathfile)
+        return container.complete()
