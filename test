@@ -19,23 +19,13 @@ from glob import glob
 import os
 import tempfile
 import unittest
+import shutil
 
 import asic
 from cli import there_can_be_only_one
 
 class TestAsic(unittest.TestCase):
     ''' Test Asic module '''
-
-    def test_asics_valid(self):
-        ''' Test asic-s valid files '''
-
-        print("\nTesting asic-s valid files asics_valid_*.zip")
-        for filename in sorted(glob(os.path.join("tests", "asics_valid_*.zip"))):
-            container = asic.ASiCS(filename)
-            print(filename)
-            print("- valid: %s" % str(container.valid))
-            print("- status: %s" % container.status)
-            self.assertTrue(container.valid)
 
 
     def test_asics_notvalid(self):
@@ -48,6 +38,29 @@ class TestAsic(unittest.TestCase):
             print("- valid: %s" % str(container.valid))
             print("- status: %s" % container.status)
             self.assertFalse(container.valid)
+
+
+    def test_asics_valid(self):
+        ''' Test asic-s valid files '''
+
+        print("\nTesting asic-s valid files asics_valid_*.zip")
+        for filename in sorted(glob(os.path.join("tests", "asics_valid_*.zip"))):
+            container = asic.ASiCS(filename)
+            print(filename)
+            print("- valid: %s" % str(container.valid))
+            print("- status: %s" % container.status)
+            self.assertTrue(container.valid)
+            with tempfile.TemporaryDirectory() as tmpdir:
+                filename_copy = os.path.join(tmpdir, os.path.basename(filename))
+                print("- copy: %s" % filename_copy)
+                shutil.copyfile(filename, filename_copy)
+                container = asic.ASiCS(filename_copy)
+                if os.path.basename(filename_copy) == "asics_valid_emptydata.zip":
+                    self.assertFalse(container.complete())
+                    print("- not completed file: %s" % filename_copy)
+                else:
+                    self.assertTrue(container.complete())
+                    print("- completed file: %s" % filename_copy)
 
 
 class TestMain(unittest.TestCase):
@@ -116,7 +129,7 @@ class TestMain(unittest.TestCase):
 
         names = glob(os.path.join("tests", "empty", "data*"))
         print("\nTesting: empty files (%s) as params" % names)
-        self.assertFalse(len(names) is not 2)
+        self.assertFalse(len(names) != 2)
         for name in names:
             self.assertTrue(os.path.isfile(name))
         self.assertFalse(there_can_be_only_one(names))
@@ -139,7 +152,7 @@ class TestMain(unittest.TestCase):
         self.assertFalse(os.path.isfile(name))
         self.assertFalse(there_can_be_only_one([name]))
 
-    def test_m6_tcboo_two_empty(self):
+    def test_m9_tcboo_two_empty(self):
         ''' Test many special files as param '''
 
         names = glob(os.path.join(os.sep, "dev", "tty?1"))
@@ -150,7 +163,7 @@ class TestMain(unittest.TestCase):
             self.assertFalse(os.path.isfile(name))
         self.assertFalse(there_can_be_only_one(names))
 
-    def test_m7_tcboo_dir_of_empty(self):
+    def test_m10_tcboo_dir_of_empty(self):
         ''' Test a dir of special files as param '''
 
         name = os.path.join(os.sep, "dev")

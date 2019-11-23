@@ -40,8 +40,6 @@ def there_can_be_only_one(pathfiles):
         else:
             pathfile = pathfiles[0]
 
-        return pathfile
-
 
     else:
         counter = 0 # initialize number of valid files to store
@@ -71,18 +69,24 @@ def there_can_be_only_one(pathfiles):
                             if os.stat(name).st_size == 0:
                                 print("Skip empty file %s" % name)
                             else:
-                                print("Adding %s inside dataobject" % name)
-                                dataobject_zip.write(name)
-                                counter += 1 # one more file stored
+                                try:
+                                    dataobject_zip.write(name)
+                                    print("Added %s inside dataobject" % name)
+                                    counter += 1 # one more file stored
+                                except Exception as err:
+                                    print("Failed to add %s inside dataobject, err=%s" % (name, err))
                         elif os.path.isdir(name):
                             for root, dirs, files in os.walk(name):
                                 for leaf in files:
                                     if os.stat(os.path.join(root, leaf)).st_size == 0:
                                         print("Skip empty file %s" % os.path.join(root, leaf))
                                     elif os.path.isfile(os.path.join(root, leaf)):
-                                        print("Adding %s inside dataobject" % os.path.join(root, leaf))
-                                        dataobject_zip.write(os.path.join(root, leaf))
-                                        counter += 1
+                                        try:
+                                            dataobject_zip.write(os.path.join(root, leaf))
+                                            print("Added %s inside dataobject" % os.path.join(root, leaf))
+                                            counter += 1
+                                        except Exception as err:
+                                            print("Failed to add %s inside dataobject, err=%s" % (os.path.join(root, leaf), err))
                                     else:
                                         print("Skip non regular file %s" % os.path.join(root, leaf))
                         else:
@@ -96,9 +100,9 @@ def there_can_be_only_one(pathfiles):
         if counter == 0:
             print("Error: no files to put inside dataobject!")
             os.remove(pathfile)
-            return None
-        else:
-            return pathfile
+            pathfile = None
+
+    return pathfile
 
 
 def main(pathfiles):
@@ -131,11 +135,14 @@ def main(pathfiles):
         # create an asic-s
         print("Creating new zip file %s with dataobject: %s" % (new_pathfile, pathfile))
         with zipfile.ZipFile(new_pathfile, mode='x') as new_zip:
-            new_zip.write(pathfile, os.path.basename(pathfile))
+            try:
+                new_zip.write(pathfile, os.path.basename(pathfile))
+            except Exception as err:
+                print("Failed to zip dataobject %s, err=%s" % (pathfile, err))
             new_zip.close()
 
         # validate the asic-s
         container = asic.ASiCS(new_pathfile)
 
-    # update the ASiC-S container or the new_zip container (becoming ASiC-S)
-    return container.update()
+    # complete the ASiC-S container or the new_zip container (becoming ASiC-S)
+    return container.complete()

@@ -57,7 +57,8 @@ def get_token(data):
     }]
 
     for tsa in tsa_list:
-        certificate = open(tsa['tsafile'], 'rb').read()
+        with open(tsa['tsafile'], 'rb') as tsa_fh:
+            certificate = tsa_fh.read()
         timestamper = RemoteTimestamper(tsa['url'], certificate=certificate, cafile=tsa['cafile'],
                                         hashname=tsa['hashname'], timeout=tsa['timeout'],
                                         username=tsa['username'], password=tsa['password'],
@@ -66,6 +67,7 @@ def get_token(data):
 
         try:
             tst = timestamper.timestamp(data=data, nonce=nonce)
+            break
         except RuntimeError:
             tst = None
 
