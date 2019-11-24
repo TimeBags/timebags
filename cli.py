@@ -84,7 +84,6 @@ def there_can_be_only_one(pathfiles, pathzip=None):
             # use file name as the zip prefix
             prefix = os.path.basename(pathfiles[0])
         else:
-            # FIXME: when invoked by GUI the user has to be asked for the path
             # use "timebag" as default prefix
             prefix = "timebag"
 
@@ -98,6 +97,7 @@ def there_can_be_only_one(pathfiles, pathzip=None):
             pathzip = prefix + "_" + str(name_number) + ".zip"
 
     elif os.path.exists(pathzip):
+        # FIXME: when invoked by GUI the user has to be asked for the path
         # FIXME: this check could be moved to args check
         logging.critical("zipfile name provided already exists: %s" % pathzip)
         return None
@@ -132,8 +132,11 @@ def main(pathfiles):
 
     # if there are more then one param, create a zip with a single dataobject containing them
     pathfile = there_can_be_only_one(pathfiles)
+    #if pathfile is not None:
     if pathfile:
 
         # complete the zip container and get an ASiC-S
         container = asic.ASiCS(pathfile)
         return container.complete()
+
+    return False

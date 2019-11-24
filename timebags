@@ -18,10 +18,13 @@ This file belong to [TimeBags Project](https://timebags.org)
 import sys
 import gui
 import cli
+import logging
 
 
 def main():
     ''' Main '''
+
+    logging.basicConfig(level=logging.DEBUG)
 
     # TBD: it's better to have timebags-qt and timebags-cli and check sys.argv[0],
     #      but how to do with pyinstaller and AppImage?

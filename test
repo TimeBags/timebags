@@ -23,7 +23,7 @@ import shutil
 import logging
 
 import asic
-from cli import there_can_be_only_one
+import cli
 
 class TestAsic(unittest.TestCase):
     ''' Test Asic module '''
@@ -52,10 +52,10 @@ class TestAsic(unittest.TestCase):
                 shutil.copyfile(filename, filename_copy)
                 container = asic.ASiCS(filename_copy)
                 if os.path.basename(filename_copy) == "asics_valid_emptydata.zip":
-                    logging.info("not completed file: %s" % filename_copy)
+                    logging.info("not to be completed file: %s" % filename_copy)
                     self.assertFalse(container.complete())
                 else:
-                    logging.info("completed file: %s" % filename_copy)
+                    logging.info("to be completed file: %s" % filename_copy)
                     self.assertTrue(container.complete())
 
 
@@ -66,10 +66,10 @@ class TestMain(unittest.TestCase):
         ''' Test a regular file as single param '''
 
         name = "Readme.md"
-        logging.info("testing: regular file (%s) as single param" % name)
+        logging.info("testing m1: regular file (%s) as single param" % name)
         self.assertTrue(os.path.exists(name))
-        file_result = there_can_be_only_one([name])
-        logging.info("Result of there_can_be_only_one(): %s" % file_result)
+        file_result = cli.there_can_be_only_one([name])
+        logging.info("Result of cli.there_can_be_only_one(): %s" % file_result)
         self.assertTrue(os.path.exists(file_result))
         # check if the result is a valid asic-s
         container = asic.ASiCS(file_result)
@@ -83,20 +83,20 @@ class TestMain(unittest.TestCase):
         ''' Test a non-existent file as single param '''
 
         name = next(tempfile._get_candidate_names())
-        logging.info("testing: non-existent file %s as single param" % name)
+        logging.info("testing m2: non-existent file %s as single param" % name)
         self.assertFalse(os.path.exists(name))
-        file_result = there_can_be_only_one([name])
-        logging.info("Result of there_can_be_only_one(): %s" % file_result)
+        file_result = cli.there_can_be_only_one([name])
+        logging.info("Result of cli.there_can_be_only_one(): %s" % file_result)
         self.assertTrue(file_result is None)
 
     def test_m3_tcboo_dir(self):
         ''' Test a dir (not a regular file) as single param '''
 
         name = os.path.join("tests", "example_dir")
-        logging.info("testing: dir %s as single param" % name)
+        logging.info("testing m3: dir %s as single param" % name)
         self.assertTrue(os.path.isdir(name))
-        file_result = there_can_be_only_one([name])
-        logging.info("Result of there_can_be_only_one(): %s" % file_result)
+        file_result = cli.there_can_be_only_one([name])
+        logging.info("Result of cli.there_can_be_only_one(): %s" % file_result)
         self.assertTrue(os.path.exists(file_result))
         # check if the result is a valid asic-s
         container = asic.ASiCS(file_result)
@@ -108,10 +108,10 @@ class TestMain(unittest.TestCase):
         ''' Test a list of files as param '''
 
         names = glob(os.path.join("*.py"))
-        logging.info("testing: list of files (%s) as param" % names)
+        logging.info("testing m4: list of files (%s) as param" % names)
         self.assertFalse(len(names) < 2)
-        file_result = there_can_be_only_one(names)
-        logging.info("Result of there_can_be_only_one(): %s" % file_result)
+        file_result = cli.there_can_be_only_one(names)
+        logging.info("Result of cli.there_can_be_only_one(): %s" % file_result)
         self.assertTrue(os.path.exists(file_result))
         # check if the result is a valid asic-s
         container = asic.ASiCS(file_result)
@@ -123,66 +123,93 @@ class TestMain(unittest.TestCase):
         ''' Test one empty file as param '''
 
         name = os.path.join("tests", "empty", "data1")
-        logging.info("testing: empty file %s as param" % name)
+        logging.info("testing m5: empty file %s as param" % name)
         self.assertTrue(os.path.isfile(name))
-        self.assertFalse(there_can_be_only_one([name]))
+        self.assertFalse(cli.there_can_be_only_one([name]))
 
     def test_m6_tcboo_two_empty(self):
         ''' Test two empty files as param '''
 
         names = glob(os.path.join("tests", "empty", "data*"))
-        logging.info("testing: empty files (%s) as params" % names)
+        logging.info("testing m6: empty files (%s) as params" % names)
         self.assertFalse(len(names) != 2)
         for name in names:
             self.assertTrue(os.path.isfile(name))
-        self.assertFalse(there_can_be_only_one(names))
+        self.assertFalse(cli.there_can_be_only_one(names))
 
     def test_m7_tcboo_dir_of_empty(self):
         ''' Test a dir of empty files as param '''
 
         name = os.path.join("tests", "empty")
-        logging.info("testing: dir of empty files (%s) as param" % name)
+        logging.info("testing m7: dir of empty files (%s) as param" % name)
         self.assertTrue(os.path.isdir(name))
-        self.assertFalse(there_can_be_only_one([name]))
+        self.assertFalse(cli.there_can_be_only_one([name]))
 
 
     def test_m8_tcboo_one_special(self):
         ''' Test one special file as param '''
 
         name = os.path.join(os.sep, "dev", "tty")
-        logging.info("testing: special file %s as param" % name)
+        logging.info("testing m8: special file %s as param" % name)
         self.assertTrue(os.path.exists(name))
         self.assertFalse(os.path.isfile(name))
-        self.assertFalse(there_can_be_only_one([name]))
+        self.assertFalse(cli.there_can_be_only_one([name]))
 
     def test_m9_tcboo_two_special(self):
         ''' Test many special files as param '''
 
         names = glob(os.path.join(os.sep, "dev", "tty?1"))
-        logging.info("testing: special files (%s) as params" % names)
+        logging.info("testing m9: special files (%s) as params" % names)
         self.assertFalse(len(names) < 2)
         for name in names:
             self.assertTrue(os.path.exists(name))
             self.assertFalse(os.path.isfile(name))
-        self.assertFalse(there_can_be_only_one(names))
+        self.assertFalse(cli.there_can_be_only_one(names))
 
     def test_m10_tcboo_dir_of_special(self):
         ''' Test a dir of special files as param '''
 
         name = os.path.join(os.sep, "dev")
-        logging.info("testing: dir of special files (%s) as param" % name)
+        logging.info("testing m10: dir of special files (%s) as param" % name)
         self.assertTrue(os.path.isdir(name))
-        self.assertFalse(there_can_be_only_one([name]))
+        self.assertFalse(cli.there_can_be_only_one([name]))
 
     def test_m11_tcboo_permitted(self):
         ''' Test not permitted files '''
 
         name = os.path.join(os.sep, "proc", "1")
-        logging.info("testing: not permitted files (%s) as param" % name)
+        logging.info("testing m11: not permitted files (%s) as param" % name)
         self.assertTrue(os.path.isdir(name))
-        self.assertFalse(there_can_be_only_one([name]))
+        self.assertFalse(cli.there_can_be_only_one([name]))
 
+    def test_m12_main_one_empty(self):
+        ''' Test one empty file as param '''
+
+        name = os.path.join("tests", "empty", "data1")
+        logging.info("testing m12: empty file %s as param" % name)
+        self.assertTrue(os.path.isfile(name))
+        self.assertFalse(cli.main([name]))
+
+    def test_m13_main_one(self):
+        ''' Test a regular file as single param '''
+
+        name = "Todo.md"
+        logging.info("testing m13: regular file (%s) as single param" % name)
+        self.assertTrue(os.path.exists(name))
+        file_result = cli.main([name])
+        logging.info("Result of cli.main(): %s" % file_result)
+        self.assertTrue(os.path.exists(file_result))
+        # check if the result is a valid asic-s
+        container = asic.ASiCS(file_result)
+        self.assertTrue(container.valid)
+        logging.info("container.dataobject = %s" % container.dataobject)
+        self.assertTrue(container.dataobject == name)
+        # cleaning
+        os.remove(file_result)
 
 
 if __name__ == '__main__':
+    ''' test '''
+
+    logging.basicConfig(level=logging.DEBUG)
     unittest.main()
