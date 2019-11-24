@@ -81,7 +81,7 @@ def tokens(zip_handler, dataobject_name, tst_name):
         # generate if needed
         if stamp_list:
             stamp_list.insert(0, "stamp")
-            print(stamp_list)
+            logging.info(stamp_list)
             ots_cmd(stamp_list)
 
         # add into zip what is missing

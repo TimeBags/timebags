@@ -18,6 +18,7 @@ import os.path
 import zipfile
 import tempfile
 import asic
+import logging
 
 
 def add_to_zip(fh_zip, name, arcname=None):
@@ -26,18 +27,18 @@ def add_to_zip(fh_zip, name, arcname=None):
     try:
         if os.stat(name).st_size == 0:
             # FIXME: should raise exception
-            print("Skip empty file %s" % name)
+            logging.critical("empty file %s" % name)
             return False
         elif os.path.isfile(name):
             fh_zip.write(name, arcname=arcname)
-            print("Zip %s" % name)
+            logging.info("zipped %s" % name)
             return True
         else:
             # FIXME: should raise exception
-            print("Skip non regular file %s" % name)
+            logging.critical("non regular file %s" % name)
             return False
     except OSError as err:
-        print("Failed to zip %s, error=%s" % (name, err))
+        logging.critical("zipping %s, error=%s" % (name, err))
         return False
 
 def create_zip(path_zip, path_files):
@@ -67,7 +68,7 @@ def create_zip(path_zip, path_files):
 
     # check if there is some file stored
     if counter == 0:
-        print("Error: not valid file found!")
+        logging.critical("found not valid file, zip aborted")
         os.remove(path_zip)
         return False
     return True
@@ -98,12 +99,12 @@ def there_can_be_only_one(pathfiles, pathzip=None):
 
     elif os.path.exists(pathzip):
         # FIXME: this check could be moved to args check
-        print("Error: zipfile name provided already exists: %s" % pathzip)
+        logging.critical("zipfile name provided already exists: %s" % pathzip)
         return None
 
     # create the asic-s zip
     with zipfile.ZipFile(pathzip, mode='x') as timebag_zip:
-        print("Creating new asic-s file %s" % pathzip)
+        logging.info("Creating new asic-s file %s" % pathzip)
 
         if len(pathfiles) == 1 and not os.path.isdir(pathfiles[0]):
             # put inside the asic-s zip the single file
@@ -120,7 +121,7 @@ def there_can_be_only_one(pathfiles, pathzip=None):
     # remove filezip if creation failed
     if not result:
         os.remove(pathzip)
-        print("Error: valid file not found in params (%s)" % pathfiles)
+        logging.critical("valid file not found in params (%s)" % pathfiles)
         return None
 
     return pathzip

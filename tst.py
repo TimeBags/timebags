@@ -29,6 +29,7 @@ openssl ts -verify -in timestamp.tst -data data.txt -CAfile cacert.pem -untruste
 
 from os import urandom
 from struct import unpack
+import logging
 from rfc3161ng import RemoteTimestamper, get_timestamp
 
 
@@ -72,9 +73,9 @@ def get_token(data):
             tst = None
 
     if tst is not None:
-        print("TSA %s timestamped dataobject at: %s" % (tsa['url'], get_timestamp(tst)))
+        logging.info("TSA %s timestamped dataobject at: %s" % (tsa['url'], get_timestamp(tst)))
     else:
-        print("ERROR: none of the tsa provided a timestamp")
+        logging.critical("none of the tsa provided a timestamp")
 
     return tst
 

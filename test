@@ -20,6 +20,7 @@ import os
 import tempfile
 import unittest
 import shutil
+import logging
 
 import asic
 from cli import there_can_be_only_one
@@ -31,36 +32,31 @@ class TestAsic(unittest.TestCase):
     def test_asics_notvalid(self):
         ''' Test asic-s NOT valid files '''
 
-        print("\nTesting: asic-s NOT valid files asics_notvalid_*.zip")
+        logging.info("testing: asic-s NOT valid files asics_notvalid_*.zip")
         for filename in sorted(glob(os.path.join("tests", "asics", "asics_notvalid_*.zip"))):
             container = asic.ASiCS(filename)
-            print(filename)
-            print("- valid: %s" % str(container.valid))
-            print("- status: %s" % container.status)
+            logging.info("file(%s) valid(%s) status(%s)" % (filename, str(container.valid), container.status))
             self.assertFalse(container.valid)
 
 
     def test_asics_valid(self):
         ''' Test asic-s valid files '''
 
-        print("\nTesting asic-s valid files asics_valid_*.zip")
+        logging.info("testing asic-s valid files asics_valid_*.zip")
         for filename in sorted(glob(os.path.join("tests", "asics", "asics_valid_*.zip"))):
             container = asic.ASiCS(filename)
-            print(filename)
-            print("- valid: %s" % str(container.valid))
-            print("- status: %s" % container.status)
+            logging.info("file(%s) valid(%s) status(%s)" % (filename, str(container.valid), container.status))
             self.assertTrue(container.valid)
             with tempfile.TemporaryDirectory() as tmpdir:
                 filename_copy = os.path.join(tmpdir, os.path.basename(filename))
-                print("- copy: %s" % filename_copy)
                 shutil.copyfile(filename, filename_copy)
                 container = asic.ASiCS(filename_copy)
                 if os.path.basename(filename_copy) == "asics_valid_emptydata.zip":
+                    logging.info("not completed file: %s" % filename_copy)
                     self.assertFalse(container.complete())
-                    print("- not completed file: %s" % filename_copy)
                 else:
+                    logging.info("completed file: %s" % filename_copy)
                     self.assertTrue(container.complete())
-                    print("- completed file: %s" % filename_copy)
 
 
 class TestMain(unittest.TestCase):
@@ -70,15 +66,15 @@ class TestMain(unittest.TestCase):
         ''' Test a regular file as single param '''
 
         name = "Readme.md"
-        print("\nTesting: regular file (%s) as single param" % name)
+        logging.info("testing: regular file (%s) as single param" % name)
         self.assertTrue(os.path.exists(name))
         file_result = there_can_be_only_one([name])
-        print("Result of there_can_be_only_one(): %s" % file_result)
+        logging.info("Result of there_can_be_only_one(): %s" % file_result)
         self.assertTrue(os.path.exists(file_result))
         # check if the result is a valid asic-s
         container = asic.ASiCS(file_result)
         self.assertTrue(container.valid)
-        print("container.dataobject = %s" % container.dataobject)
+        logging.info("container.dataobject = %s" % container.dataobject)
         self.assertTrue(container.dataobject == name)
         # cleaning
         os.remove(file_result)
@@ -87,20 +83,20 @@ class TestMain(unittest.TestCase):
         ''' Test a non-existent file as single param '''
 
         name = next(tempfile._get_candidate_names())
-        print("\nTesting: non-existent file %s as single param" % name)
+        logging.info("testing: non-existent file %s as single param" % name)
         self.assertFalse(os.path.exists(name))
         file_result = there_can_be_only_one([name])
-        print("Result of there_can_be_only_one(): %s" % file_result)
+        logging.info("Result of there_can_be_only_one(): %s" % file_result)
         self.assertTrue(file_result is None)
 
     def test_m3_tcboo_dir(self):
         ''' Test a dir (not a regular file) as single param '''
 
         name = os.path.join("tests", "example_dir")
-        print("\nTesting: dir %s as single param" % name)
+        logging.info("testing: dir %s as single param" % name)
         self.assertTrue(os.path.isdir(name))
         file_result = there_can_be_only_one([name])
-        print("Result of there_can_be_only_one(): %s" % file_result)
+        logging.info("Result of there_can_be_only_one(): %s" % file_result)
         self.assertTrue(os.path.exists(file_result))
         # check if the result is a valid asic-s
         container = asic.ASiCS(file_result)
@@ -112,10 +108,10 @@ class TestMain(unittest.TestCase):
         ''' Test a list of files as param '''
 
         names = glob(os.path.join("*.py"))
-        print("\nTesting: list of files (%s) as param" % names)
+        logging.info("testing: list of files (%s) as param" % names)
         self.assertFalse(len(names) < 2)
         file_result = there_can_be_only_one(names)
-        print("Result of there_can_be_only_one(): %s" % file_result)
+        logging.info("Result of there_can_be_only_one(): %s" % file_result)
         self.assertTrue(os.path.exists(file_result))
         # check if the result is a valid asic-s
         container = asic.ASiCS(file_result)
@@ -127,7 +123,7 @@ class TestMain(unittest.TestCase):
         ''' Test one empty file as param '''
 
         name = os.path.join("tests", "empty", "data1")
-        print("\nTesting: empty file %s as param" % name)
+        logging.info("testing: empty file %s as param" % name)
         self.assertTrue(os.path.isfile(name))
         self.assertFalse(there_can_be_only_one([name]))
 
@@ -135,7 +131,7 @@ class TestMain(unittest.TestCase):
         ''' Test two empty files as param '''
 
         names = glob(os.path.join("tests", "empty", "data*"))
-        print("\nTesting: empty files (%s) as params" % names)
+        logging.info("testing: empty files (%s) as params" % names)
         self.assertFalse(len(names) != 2)
         for name in names:
             self.assertTrue(os.path.isfile(name))
@@ -145,7 +141,7 @@ class TestMain(unittest.TestCase):
         ''' Test a dir of empty files as param '''
 
         name = os.path.join("tests", "empty")
-        print("\nTesting: dir of empty files (%s) as param" % name)
+        logging.info("testing: dir of empty files (%s) as param" % name)
         self.assertTrue(os.path.isdir(name))
         self.assertFalse(there_can_be_only_one([name]))
 
@@ -154,7 +150,7 @@ class TestMain(unittest.TestCase):
         ''' Test one special file as param '''
 
         name = os.path.join(os.sep, "dev", "tty")
-        print("\nTesting: special file %s as param" % name)
+        logging.info("testing: special file %s as param" % name)
         self.assertTrue(os.path.exists(name))
         self.assertFalse(os.path.isfile(name))
         self.assertFalse(there_can_be_only_one([name]))
@@ -163,7 +159,7 @@ class TestMain(unittest.TestCase):
         ''' Test many special files as param '''
 
         names = glob(os.path.join(os.sep, "dev", "tty?1"))
-        print("\nTesting: special files (%s) as params" % names)
+        logging.info("testing: special files (%s) as params" % names)
         self.assertFalse(len(names) < 2)
         for name in names:
             self.assertTrue(os.path.exists(name))
@@ -174,7 +170,7 @@ class TestMain(unittest.TestCase):
         ''' Test a dir of special files as param '''
 
         name = os.path.join(os.sep, "dev")
-        print("\nTesting: dir of special files (%s) as param" % name)
+        logging.info("testing: dir of special files (%s) as param" % name)
         self.assertTrue(os.path.isdir(name))
         self.assertFalse(there_can_be_only_one([name]))
 
@@ -182,7 +178,7 @@ class TestMain(unittest.TestCase):
         ''' Test not permitted files '''
 
         name = os.path.join(os.sep, "proc", "1")
-        print("\nTesting: not permitted files (%s) as param" % name)
+        logging.info("testing: not permitted files (%s) as param" % name)
         self.assertTrue(os.path.isdir(name))
         self.assertFalse(there_can_be_only_one([name]))
 
