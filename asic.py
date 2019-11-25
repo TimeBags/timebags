@@ -50,6 +50,7 @@ mimetype with the string "mimetype=application/vnd.etsi.asic-s+zip"
 
 import os.path
 import zipfile
+import logging
 import tst
 import ots
 
@@ -123,8 +124,9 @@ class ASiCS():
                                     % (self.pathfile, self.mimetype)
                 else:
                     self.valid = True
-                    self.status = "%s can be updated as a simple ASiC-S container" % self.pathfile
+                    self.status = "%s can be completed as a simple ASiC-S container" % self.pathfile
 
+        logging.info(self.status)
 
     def complete(self):
         '''  Complete an ASiC-S file '''
@@ -162,6 +164,9 @@ class ASiCS():
 
             dataobject_ots = os.path.join("META-INF", self.dataobject + ".ots")
             result = set((TIMESTAMP, TIMESTAMP_OTS, dataobject_ots)) <= set(container.namelist())
+            logging.debug(repr(set((TIMESTAMP, TIMESTAMP_OTS, dataobject_ots))))
+            logging.debug(repr(set(container.namelist())))
+            logging.debug(result)
             container.close()
 
         return result

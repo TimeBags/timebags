@@ -137,6 +137,7 @@ def main(pathfiles):
 
         # complete the zip container and get an ASiC-S
         container = asic.ASiCS(pathfile)
+        logging.info("asic %s, valid: %s, status: %s" % (pathfile, container.valid, container.status))
         return container.complete()
 
     return False
