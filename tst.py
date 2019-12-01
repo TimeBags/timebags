@@ -69,13 +69,15 @@ def get_token(data):
         try:
             tst = timestamper.timestamp(data=data, nonce=nonce)
             break
-        except RuntimeError:
+        except RuntimeError as err:
+            logging.debug(err)
             tst = None
 
     if tst is not None:
         logging.info("TSA %s timestamped dataobject at: %s" % (tsa['url'], get_timestamp(tst)))
     else:
-        logging.critical("none of the tsa provided a timestamp")
+        msg = "none of the TSA provided a timestamp"
+        logging.critical(msg)
 
     return tst
 

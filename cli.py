@@ -25,15 +25,25 @@ import asic
 def add_to_zip(fh_zip, name, arcname=None):
     ''' try adding a file to the zip archive '''
 
-    if os.stat(name).st_size == 0:
-        msg = "empty file %s" % name
-        raise Exception(msg)
 
     if not os.path.isfile(name):
         msg = "non regular file %s" % name
-        raise Exception(msg)
+        logging.info(msg)
+        return False
 
-    fh_zip.write(name, arcname=arcname)
+    # NOTE : an empty file could be accepted in general with a warning message
+    #        because only when it's the single dataobject in the asic-s archive
+    #        it can't be timestamped, and so it will be catched inside tst.py
+    if os.stat(name).st_size == 0:
+        msg = "empty file %s" % name
+        logging.warning(msg)
+
+    try:
+        fh_zip.write(name, arcname=arcname)
+    except OSError:
+        logging.critical(msg)
+        return False
+
     msg = "zipped %s" % name
     logging.info(msg)
     return True
@@ -44,6 +54,8 @@ def create_zip(path_zip, path_files):
 
     with zipfile.ZipFile(path_zip, mode='x') as fh_zip:
 
+        msg = "creating zipfile %s" % path_zip
+        logging.info(msg)
         counter = 0
         for name in path_files:
 
@@ -68,13 +80,19 @@ def create_zip(path_zip, path_files):
     if counter == 0:
         os.remove(path_zip)
         msg = "found not valid file, zip aborted"
-        raise Exception(msg)
+        logging.critical(msg)
+        return False
     return True
 
 
 def there_can_be_only_one(pathfiles, pathzip=None):
-    ''' asic-s MUST have a single dataobject '''
+    ''' asic-s MUST have a single dataobject (not empty)'''
 
+
+    # if there is only an empty file, do not create an azic-s archive with it
+    if len(pathfiles) == 1 and os.path.isfile(pathfiles[0]) and os.stat(pathfiles[0]).st_size == 0:
+        logging.critical("can't create valid asic-s with an empty file(%s)" % pathfiles[0])
+        return None
 
     # if a new zipfile name is not provided build it
     if not pathzip:
@@ -101,8 +119,9 @@ def there_can_be_only_one(pathfiles, pathzip=None):
         raise Exception(msg)
 
     # create the asic-s zip
+    result = False
     with zipfile.ZipFile(pathzip, mode='x') as timebag_zip:
-        msg = "Creating new asic-s file %s" % pathzip
+        msg = "creating new asic-s file %s" % pathzip
         logging.info(msg)
 
         if len(pathfiles) == 1 and not os.path.isdir(pathfiles[0]):
@@ -122,7 +141,8 @@ def there_can_be_only_one(pathfiles, pathzip=None):
     if not result:
         os.remove(pathzip)
         msg = "valid file not found in params (%s)" % pathfiles
-        raise Exception(msg)
+        logging.critical(msg)
+        return None
 
     return pathzip
 
@@ -131,29 +151,29 @@ def main(pathfiles):
     ''' Main '''
 
     try:
-        pathfile = None
-        if len(pathfiles) == 1:
-            # if there is only one param check for valid asic-s
+        result_pathfile = None
+
+        # if there is only one param check for valid asic-s
+        if len(pathfiles) == 1 and not os.path.isdir(pathfiles[0]):
             container = asic.ASiCS(pathfiles[0])
             if container.valid:
-                pathfile = pathfiles[0]
+                result_pathfile = pathfiles[0]
 
-        if pathfile is None:
-            # create a new zip asic-s
-            pathfile = there_can_be_only_one(pathfiles)
+        # if it's not an asic-s, then create a new zip asic-s
+        if result_pathfile is None:
+            result_pathfile = there_can_be_only_one(pathfiles)
+
+        # if success creating asic-s, then complete it with timestamps
+        if result_pathfile is not None:
+            container = asic.ASiCS(result_pathfile)
+            msg = "asic %s, valid: %s, status: %s" % (result_pathfile, container.valid, container.status)
+            logging.info(msg)
+
+            # if success return the result pathfile
+            if container.complete():
+                return result_pathfile
 
     except Exception as err:
         logging.critical(err)
-        return None
-
-    #if pathfile is not None:
-    if pathfile:
-
-        # complete the zip container and get an ASiC-S
-        container = asic.ASiCS(pathfile)
-        msg = "asic %s, valid: %s, status: %s" % (pathfile, container.valid, container.status)
-        logging.info(msg)
-        if container.complete():
-            return pathfile
 
     return None
