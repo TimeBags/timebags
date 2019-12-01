@@ -48,10 +48,14 @@ def tokens(zip_handler, dataobject_name, tst_name):
         stamp_list = []
         # extract dataobject
         dataobject_path = os.path.join(tmpdir, dataobject_name)
+        msg = "extraxting dataobject to: %s" % dataobject_path
+        logging.debug(msg)
         with open(dataobject_path, 'xb') as dataobject:
             dataobject.write(zip_handler.read(dataobject_name))
         # extract tst
         tst_path = os.path.join(tmpdir, os.path.basename(tst_name))
+        msg = "extraxting tst to: %s" % tst_path
+        logging.debug(msg)
         with open(tst_path, 'xb') as tst:
             tst.write(zip_handler.read(tst_name))
 

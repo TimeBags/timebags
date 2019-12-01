@@ -66,6 +66,8 @@ def get_token(data):
                                         include_tsa_certificate=tsa['include_tsa_cert'])
         nonce = unpack('<q', urandom(8))[0]
 
+        msg = "try using TSA endpoint %s to timestamp data" % tsa['url']
+        logging.debug(msg)
         try:
             tst = timestamper.timestamp(data=data, nonce=nonce)
             break
@@ -74,7 +76,8 @@ def get_token(data):
             tst = None
 
     if tst is not None:
-        logging.info("TSA %s timestamped dataobject at: %s" % (tsa['url'], get_timestamp(tst)))
+        msg = "TSA %s timestamped dataobject at: %s" % (tsa['url'], get_timestamp(tst))
+        logging.info(msg)
     else:
         msg = "none of the TSA provided a timestamp"
         logging.critical(msg)

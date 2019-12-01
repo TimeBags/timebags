@@ -91,7 +91,8 @@ def there_can_be_only_one(pathfiles, pathzip=None):
 
     # if there is only an empty file, do not create an azic-s archive with it
     if len(pathfiles) == 1 and os.path.isfile(pathfiles[0]) and os.stat(pathfiles[0]).st_size == 0:
-        logging.critical("can't create valid asic-s with an empty file(%s)" % pathfiles[0])
+        msg = "can't create valid asic-s with an empty file(%s)" % pathfiles[0]
+        logging.critical(msg)
         return None
 
     # if a new zipfile name is not provided build it
@@ -166,7 +167,8 @@ def main(pathfiles):
         # if success creating asic-s, then complete it with timestamps
         if result_pathfile is not None:
             container = asic.ASiCS(result_pathfile)
-            msg = "asic %s, valid: %s, status: %s" % (result_pathfile, container.valid, container.status)
+            msg = "asic %s, valid: %s, status: %s" % \
+                    (result_pathfile, container.valid, container.status)
             logging.info(msg)
 
             # if success return the result pathfile

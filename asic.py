@@ -89,8 +89,8 @@ class ASiCS():
 
             # integrity check
             if container.testzip() is not None:
-                self.status = "%s is not a valid zip archive, \
-                            it will be encapsulated as a dataobject" % self.pathfile
+                self.status = "%s is not a valid zip archive, " \
+                            "it will be encapsulated as a dataobject" % self.pathfile
                 logging.debug(self.status)
             else:
 

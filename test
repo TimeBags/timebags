@@ -35,21 +35,9 @@ class TestAsic(unittest.TestCase):
         logging.info("##### Testing: asic-s NOT valid files asics_notvalid_*.zip")
         for filename in sorted(glob(os.path.join("tests", "asics", "asics_notvalid_*.zip"))):
             container = asic.ASiCS(filename)
-            logging.info("file(%s) valid(%s) status(%s)" % (filename, str(container.valid), container.status))
+            logging.info("file(%s) valid(%s) status(%s)" % \
+                    (filename, str(container.valid), container.status))
             self.assertFalse(container.valid)
-
-
-    def test_asics_exception(self):
-        ''' Test asic-s EXCEPTION raising files '''
-
-        logging.info("##### Testing: asic-s files raising Exception")
-        for filename in sorted(glob(os.path.join("tests", "asics", "asics_exception*.zip"))):
-            try:
-                container = asic.ASiCS(filename)
-                logging.info("file(%s) valid(%s) status(%s)" % (filename, str(container.valid), container.status))
-                self.assertFalse(True)
-            except Exception as err:
-                logging.info(err)
 
 
     def test_asics_valid(self):
@@ -58,13 +46,13 @@ class TestAsic(unittest.TestCase):
         logging.info("##### Testing asic-s valid files asics_valid_*.zip")
         for filename in sorted(glob(os.path.join("tests", "asics", "asics_valid_*.zip"))):
             container = asic.ASiCS(filename)
-            logging.info("file(%s) valid(%s) status(%s)" % (filename, str(container.valid), container.status))
+            logging.info("file(%s) valid(%s) status(%s)" % \
+                    (filename, str(container.valid), container.status))
             self.assertTrue(container.valid)
             with tempfile.TemporaryDirectory() as tmpdir:
                 filename_copy = os.path.join(tmpdir, os.path.basename(filename))
                 shutil.copyfile(filename, filename_copy)
                 container = asic.ASiCS(filename_copy)
-                # FIXME: empty dataobject should be NOT valid!
                 logging.info("to be completed file: %s" % filename_copy)
                 self.assertTrue(container.complete())
 
@@ -210,7 +198,7 @@ class TestMain(unittest.TestCase):
 if __name__ == '__main__':
     ''' test '''
 
-    logfile = os.path.join("tests","test.log")
-    logging.basicConfig(filename=logfile, filemode='w', level=logging.DEBUG)
-    #logging.basicConfig(level=logging.DEBUG)
+    #logfile = os.path.join("tests","test.log")
+    #logging.basicConfig(filename=logfile, filemode='w', level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
     unittest.main()
