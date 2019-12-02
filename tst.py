@@ -27,7 +27,8 @@ openssl ts -reply -in timestamp.tst -token_in -text
 openssl ts -verify -in timestamp.tst -data data.txt -CAfile cacert.pem -untrusted tsa.crt
 '''
 
-from os import urandom
+import os
+import inspect
 from struct import unpack
 import logging
 from rfc3161ng import RemoteTimestamper, get_timestamp
@@ -57,14 +58,16 @@ def get_token(data):
         'include_tsa_cert' : True
     }]
 
+    app_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
     for tsa in tsa_list:
-        with open(tsa['tsafile'], 'rb') as tsa_fh:
+        tsa_pathfile = os.path.join(app_dir, tsa['tsafile'])
+        with open(tsa_pathfile, 'rb') as tsa_fh:
             certificate = tsa_fh.read()
         timestamper = RemoteTimestamper(tsa['url'], certificate=certificate, cafile=tsa['cafile'],
                                         hashname=tsa['hashname'], timeout=tsa['timeout'],
                                         username=tsa['username'], password=tsa['password'],
                                         include_tsa_certificate=tsa['include_tsa_cert'])
-        nonce = unpack('<q', urandom(8))[0]
+        nonce = unpack('<q', os.urandom(8))[0]
 
         msg = "try using TSA endpoint %s to timestamp data" % tsa['url']
         logging.debug(msg)
