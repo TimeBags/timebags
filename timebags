@@ -17,6 +17,8 @@ This file belong to [TimeBags Project](https://timebags.org)
 
 import sys
 import logging
+import os
+import ctypes
 
 import gui
 import cli
@@ -25,7 +27,23 @@ import cli
 def main():
     ''' Main '''
 
-    logging.basicConfig(level=logging.DEBUG)
+    home = os.path.expanduser("~")
+    prefix = '.' if os.name != 'nt' else ''
+    path_conf_dir = os.path.join(home, prefix + "timebags")
+    if not os.path.exists(path_conf_dir):
+        os.mkdir(path_conf_dir)
+        if os.name == 'nt':
+            if not ctypes.windll.kernel32.SetFileAttributesW(path_conf_dir, 0x02):
+                raise ctypes.WinError()
+
+    if not os.path.isdir(path_conf_dir):
+        error = "unable to use configuration dir: " % path_conf_dir
+        raise Exception(error)
+
+    # default log to a file at DEBUG level if running in GUI mode
+    logfile = os.path.join(path_conf_dir, "debug.log")
+    logging.basicConfig(filename=logfile, filemode='w', level=logging.DEBUG)
+
 
     # TBD: it's better to have timebags-qt and timebags-cli and check sys.argv[0],
     #      but how to do with pyinstaller and AppImage?
