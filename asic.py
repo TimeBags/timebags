@@ -181,11 +181,12 @@ class ASiCS():
             #       EU QTSP are listed in public lists with their certs.
             #       A trusted copy of the root CA certificate is needed too.
 
+            dataobject_ots = os.path.join("META-INF", self.dataobject + ".ots")
             if TIMESTAMP in container.namelist():
                 # if tst is present then move on adding or upgrading ots
-                ots.tokens(container, self.dataobject, TIMESTAMP)
+                ots.token(container, self.dataobject, dataobject_ots)
+                ots.token(container, TIMESTAMP, TIMESTAMP_OTS)
 
-            dataobject_ots = os.path.join("META-INF", self.dataobject + ".ots")
             result = set((TIMESTAMP, TIMESTAMP_OTS, dataobject_ots)) <= set(container.namelist())
             logging.debug(repr(set((TIMESTAMP, TIMESTAMP_OTS, dataobject_ots))))
             logging.debug(repr(set(container.namelist())))

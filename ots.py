@@ -26,112 +26,52 @@ METAINF_DIR = os.path.join("META-INF", "")
 def ots_cmd(params):
     ''' Execute ots command '''
     args = otsclient.args.parse_ots_args(params)
-
-    logging.basicConfig(format='%(message)s')
-
-    if args.verbosity == 0:
-        logging.root.setLevel(logging.INFO)
-    elif args.verbosity > 0:
-        logging.root.setLevel(logging.DEBUG)
-    elif args.verbosity == -1:
-        logging.root.setLevel(logging.WARNING)
-    elif args.verbosity < -1:
-        logging.root.setLevel(logging.ERROR)
-
     if not hasattr(args, 'cmd_func'):
         args.parser.error('No command specified')
 
-    # FIXME: cannot handle errors?!
+    # FIXME: no return value? cannot handle errors?!
     args.cmd_func(args)
 
 
-def tokens(zip_handler, dataobject_name, tst_name):
-    ''' Generate, upgrade, prune, verify ots '''
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        stamp_list = []
-        # extract dataobject
-        dataobject_path = os.path.join(tmpdir, dataobject_name)
-        msg = "extraxting dataobject to: %s" % dataobject_path
-        logging.debug(msg)
-        with open(dataobject_path, 'xb') as dataobject:
-            dataobject.write(zip_handler.read(dataobject_name))
-        # extract tst
-        tst_path = os.path.join(tmpdir, os.path.basename(tst_name))
-        msg = "extraxting tst to: %s" % tst_path
-        logging.debug(msg)
-        with open(tst_path, 'xb') as tst:
-            tst.write(zip_handler.read(tst_name))
-
-        # ots of dataobject
-        zip_ots_dataobject_name = os.path.join("META-INF", dataobject_name + ".ots")
-        if zip_ots_dataobject_name in zip_handler.namelist():
-            # if exist extract
-            with open(dataobject_path + ".ots", 'xb') as ots_dataobject:
-                ots_dataobject.write(zip_handler.read(zip_ots_dataobject_name))
-            # TODO: upgrade, prune, verify
-        else:
-            # append to list to generate it
-            stamp_list.append(dataobject_path)
-
-        # ots of tst
-        ots_tst_name = tst_name + ".ots"
-        ots_tst_path = tst_path + ".ots"
-        if ots_tst_name in zip_handler.namelist():
-            # if exist extract
-            with open(ots_tst_path, 'xb') as ots_tst:
-                ots_tst.write(zip_handler.read(ots_tst_name))
-            # TODO: upgrade, prune, verify
-        else:
-            # append to list to generate it
-            stamp_list.append(tst_path)
-
-        # generate if needed
-        if stamp_list:
-            stamp_list.insert(0, "stamp")
-            logging.info(stamp_list)
-            ots_cmd(stamp_list)
-
-        # add into zip what is missing
-        if zip_ots_dataobject_name not in zip_handler.namelist():
-            zip_handler.write(dataobject_path + ".ots", zip_ots_dataobject_name)
-        if ots_tst_name not in zip_handler.namelist():
-            zip_handler.write(ots_tst_path, ots_tst_name)
-
-
-
-def token(zip_handler, name):
+def token(zip_handler, obj_zip, ots_zip):
     ''' Generate or upgrade ots '''
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        # extract obj
-        obj_path = os.path.join(tmpdir, name)
-        msg = "extraxting object to: %s" % obj_path
-        logging.debug(msg)
-        with open(obj_path, 'xb') as obj:
-            obj.write(zip_handler.read(name))
 
-        # ots of obj
-        ots_path = obj_path + ".ots"
-        if name.startswith(METAINF_DIR):
-            ots_name = name + ".ots"
-        else:
-            ots_name = os.path.join(METAINF_DIR, name + ".ots")
-        if ots_name in zip_handler.namelist():
+        # construct ots and obj tmp names
+        if obj_zip.startswith(METAINF_DIR):
+            # if obj is inside META-INF dir then
+            # create META-INF dir also inside temp dir
+            os.mkdir(os.path.join(tmpdir, METAINF_DIR))
+        # ots in temp dir are in the same dir to be used by ots_cmd
+        obj_tmp = os.path.join(tmpdir, obj_zip)
+        ots_tmp = obj_tmp + ".ots"
+
+        # extract obj
+        msg = "extraxting object to: %s" % obj_tmp
+        logging.debug(msg)
+        with open(obj_tmp, 'xb') as obj:
+            obj.write(zip_handler.read(obj_zip))
+
+        # check for ots existence
+        if ots_zip in zip_handler.namelist():
             # if already exist in zipfile then extract it
-            with open(ots_path, 'xb') as ots_obj:
-                ots_obj.write(zip_handler.read(ots_name))
-            ots_cmd(["upgrade", obj_path])
-            # FIXME: check result ots-cli exitcode?
-            #zip_handler.delete(ots_name)
-            #zip_handler.write(ots_path, ots_name)
-            # TODO: prune, verify
+            with open(ots_tmp, 'xb') as ots_obj:
+                ots_obj.write(zip_handler.read(ots_zip))
+            # verify automagically upgrade too
+            # FIXME: upgrade and catch output
+            #ots_cmd(["upgrade", obj_tmp])
+            # FIXME: update ots
+            #zip_handler.delete(ots_zip)
+            #zip_handler.write(ots_tmp, ots_zip)
         else:
             # generate it
-            ots_cmd(["stamp", obj_path])
+            ots_cmd(["stamp", "--timeout", "20", obj_tmp])
             # FIXME: check result ots-cli exitcode?
-            if os.path.exists(ots_path):
-                zip_handler.write(ots_path, ots_name)
+            if os.path.exists(ots_tmp):
+                zip_handler.write(ots_tmp, ots_zip)
+                msg = "ots %s added as: %s" % (ots_tmp, ots_zip)
+                logging.debug(msg)
             else:
-                msg = "ots not generated: %s" % ots_path
+                msg = "ots not generated: %s" % ots_tmp
                 logging.critical(msg)
