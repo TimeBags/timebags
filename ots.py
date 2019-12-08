@@ -60,7 +60,7 @@ def token(zip_handler, obj_zip, ots_zip):
                 ots_obj.write(zip_handler.read(ots_zip))
             # verify automagically upgrade too
             # FIXME: upgrade and catch output
-            #ots_cmd(["upgrade", obj_tmp])
+            #ots_cmd(["--no-bitcoin", "verify", ots_tmp])
             # FIXME: update ots
             #zip_handler.delete(ots_zip)
             #zip_handler.write(ots_tmp, ots_zip)
