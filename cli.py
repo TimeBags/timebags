@@ -151,31 +151,28 @@ def there_can_be_only_one(pathfiles, pathzip=None):
 def main(pathfiles):
     ''' Main '''
 
-    try:
-        result_pathfile = None
 
-        # if there is only one param check for valid asic-s
-        if len(pathfiles) == 1 and not os.path.isdir(pathfiles[0]):
-            container = asic.ASiCS(pathfiles[0])
-            if container.valid:
-                result_pathfile = pathfiles[0]
+    result_pathfile = None
 
-        # if it's not an asic-s, then create a new zip asic-s
-        if result_pathfile is None:
-            result_pathfile = there_can_be_only_one(pathfiles)
+    # if there is only one param check for valid asic-s
+    if len(pathfiles) == 1 and not os.path.isdir(pathfiles[0]):
+        container = asic.ASiCS(pathfiles[0])
+        if container.valid:
+            result_pathfile = pathfiles[0]
 
-        # if success creating asic-s, then complete it with timestamps
-        if result_pathfile is not None:
-            container = asic.ASiCS(result_pathfile)
-            msg = "asic %s, valid: %s, status: %s" % \
-                    (result_pathfile, container.valid, container.status)
-            logging.info(msg)
+    # if it's not an asic-s, then create a new zip asic-s
+    if result_pathfile is None:
+        result_pathfile = there_can_be_only_one(pathfiles)
 
-            # if success return the result pathfile
-            if container.complete():
-                return result_pathfile
+    # if success creating asic-s, then complete it with timestamps
+    if result_pathfile is not None:
+        container = asic.ASiCS(result_pathfile)
+        msg = "asic %s, valid: %s, status: %s" % \
+                (result_pathfile, container.valid, container.status)
+        logging.info(msg)
 
-    except Exception as err:
-        logging.critical(err)
+        # if success return the result pathfile
+        if container.complete():
+            return result_pathfile
 
     return None
