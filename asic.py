@@ -73,10 +73,13 @@ class ASiCS():
         self.valid = False
         self.dataobject = None
         self.mimetype = ""
-        self.status = ""
+        # TST values: None | (<date>, <verified>)
+        # OTS values: None | ('Pending', None) | ('BTC:<block height>', <verified>)
+        self.status = {'result': None, 'asic-s': None, 'dat-tst': None,
+                       'dat-ots': None, 'tst-ots': None}
 
         if not zipfile.is_zipfile(self.pathfile):
-            self.status = "%s is not a zip archive" % self.pathfile
+            self.status['asic-s'] = "%s is not a zip archive" % self.pathfile
         else:
             self.validate()
 
@@ -90,9 +93,9 @@ class ASiCS():
 
             # integrity check
             if container.testzip() is not None:
-                self.status = "%s is not a valid zip archive, " \
+                self.status['asic-s'] = "%s is not a valid zip archive, " \
                             "it will be encapsulated as a dataobject" % self.pathfile
-                logging.debug(self.status)
+                logging.debug(self.status['asic-s'])
             else:
 
                 # asic-s validity check
@@ -131,22 +134,22 @@ class ASiCS():
                     # a valid ASiC-S container must have exactly one dataobject
                     # if ASiC-S contains detached signatures or META-INF files
                     # then it is better timestamping the ASiC-S as a dataobject
-                    self.status = "%s will be encapsulated because it has %d dataobjects" \
+                    self.status['asic-s'] = "%s encapsulated because has %d dataobjects" \
                                     % (self.pathfile, n_dataobject)
                 elif dataobject_size == 0:
-                    self.status = "%s has dataobject '%s' with size == 0" \
+                    self.status['asic-s'] = "%s has dataobject '%s' with size == 0" \
                                     % (self.pathfile, self.dataobject)
                 elif self.mimetype not in ("", MIMETYPE):
                     # zip files with mimetype other then asic-s should not be modified
                     # but used as dataobject in a fresh asic-s zip file
-                    self.status = "%s will be encapsulated because mimetype is not ASiC-S: %s" \
+                    self.status['asic-s'] = "%s encapsulated because mimetype not ASiC-S: %s" \
                                     % (self.pathfile, self.mimetype)
                 else:
                     # 1. only one dataobjec; 2. size>0; 3. MIMETYPE absent or asic-s
                     self.valid = True
-                    self.status = "%s can be completed as a simple ASiC-S container" % self.pathfile
+                    self.status['asic-s'] = "%s is a valid ASiC-S container" % self.pathfile
 
-        logging.info(self.status)
+        logging.info(self.status['asic-s'])
 
 
     def complete(self):
@@ -207,13 +210,9 @@ class ASiCS():
         ''' Process asic-s file content looking for timestamps:
             add missing, upgrade/verify what already exists '''
 
-
-        # TST values: None | (<date>, <verified>)
-        # OTS values: None | ('Pending', None) | ('BTC:<block height>', <verified>)
-        ret = {'TST of data': None, 'OTS of data': None, 'OTS of TST': None}
         with tempfile.TemporaryDirectory() as tmpdir:
 
-            # find a name not already used
+            # find a name not already used for the new zip
             new_pathfile = self.pathfile + "_new"
             name_number = 0
             while os.path.exists(new_pathfile):
@@ -227,13 +226,15 @@ class ASiCS():
             with zipfile.ZipFile(self.pathfile, mode='r') as container:
                 container.extractall(path=tmpdir)
                 # apply changes to extracted files
+                # TBD: complete
+                # TBD: verify/upgrade
                 with zipfile.ZipFile(new_pathfile, mode='x') as new_zip:
                     for item in container.infolist():
                         # new_zip.write(item, container.read(item.filename))
-                        with open() as new_item:
+                        with open(os.path.join(tmpdir, ), "rb") as new_item:
                             new_zip.write(item, new_item.read())
 
             # replace old zip with the new
             # shutil.move(new_pathfile, self.pathfile)
 
-        return ret
+        return self.status

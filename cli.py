@@ -168,7 +168,7 @@ def main(pathfiles):
     if result_pathfile is not None:
         container = asic.ASiCS(result_pathfile)
         msg = "asic %s, valid: %s, status: %s" % \
-                (result_pathfile, container.valid, container.status)
+                (result_pathfile, container.valid, container.status['asic-s'])
         logging.info(msg)
 
         # if success return the result pathfile
