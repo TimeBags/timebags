@@ -158,6 +158,8 @@ def main(pathfiles):
     if len(pathfiles) == 1 and not os.path.isdir(pathfiles[0]):
         container = asic.ASiCS(pathfiles[0])
         if container.valid:
+            # FIXME: if the asic has just a tst, the user may want to choose
+            #        between complete with ots or just verify tst
             result_pathfile = pathfiles[0]
 
     # if it's not an asic-s, then create a new zip asic-s
