@@ -35,7 +35,7 @@ class TestAsic(unittest.TestCase):
         logging.info("##### Testing: asic-s NOT valid files asics_notvalid_*.zip")
         for filename in sorted(glob(os.path.join("tests", "asics", "asics_notvalid_*.zip"))):
             container = asic.ASiCS(filename)
-            logging.info("file(%s) valid(%s) status(%s)" % \
+            logging.info("##### Testing: file(%s) valid(%s) status(%s)" % \
                     (filename, str(container.valid), container.status))
             self.assertFalse(container.valid)
 
@@ -46,7 +46,7 @@ class TestAsic(unittest.TestCase):
         logging.info("##### Testing asic-s valid files asics_valid_*.zip")
         for filename in sorted(glob(os.path.join("tests", "asics", "asics_valid_*.zip"))):
             container = asic.ASiCS(filename)
-            logging.info("file(%s) valid(%s) status(%s)" % \
+            logging.info("##### Testing file(%s) valid(%s) status(%s)" % \
                     (filename, str(container.valid), container.status))
             self.assertTrue(container.valid)
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -54,7 +54,6 @@ class TestAsic(unittest.TestCase):
                 shutil.copyfile(filename, filename_copy)
                 container = asic.ASiCS(filename_copy)
                 logging.info("to be completed file: %s" % filename_copy)
-                #self.assertTrue(container.complete())
                 self.assertTrue('PENDING' == container.process_timestamps())
 
 
@@ -67,16 +66,12 @@ class TestMain(unittest.TestCase):
         name = "Readme.md"
         logging.info("##### Testing m1: regular file(%s) as single param" % name)
         self.assertTrue(os.path.exists(name))
-        file_result = cli.main([name])
-        logging.info("Result of cli.main(): %s" % file_result)
-        self.assertTrue(os.path.exists(file_result))
-        # check if the result is a valid asic-s
-        container = asic.ASiCS(file_result)
-        self.assertTrue(container.valid)
-        logging.info("container.dataobject = %s" % container.dataobject)
-        self.assertTrue(container.dataobject == name)
+        ret = cli.main([name])
+        logging.info("Ret of cli.main(): %s" % repr(ret))
+        self.assertTrue(os.path.exists(ret['pathfile']))
+        self.assertTrue('PENDING' == ret['result'])
         # cleaning
-        os.remove(file_result)
+        os.remove(ret['pathfile'])
 
     def test__m2_main_none(self):
         ''' Test a non-existent file as single param '''
@@ -84,9 +79,9 @@ class TestMain(unittest.TestCase):
         name = next(tempfile._get_candidate_names())
         logging.info("##### Testing m2: non-existent file(%s) as single param" % name)
         self.assertFalse(os.path.exists(name))
-        file_result = cli.main([name])
-        logging.info("Result of cli.main(): %s" % file_result)
-        self.assertTrue(file_result is None)
+        ret = cli.main([name])
+        logging.info("Ret of cli.main(): %s" % repr(ret))
+        self.assertTrue(ret is None)
 
     def test_m3_main_dir(self):
         ''' Test a dir (not a regular file) as single param '''
@@ -94,14 +89,12 @@ class TestMain(unittest.TestCase):
         name = os.path.join("tests", "example_dir")
         logging.info("##### Testing m3: dir(%s) as single param" % name)
         self.assertTrue(os.path.isdir(name))
-        file_result = cli.main([name])
-        logging.info("Result of cli.main(): %s" % file_result)
-        self.assertTrue(os.path.exists(file_result))
-        # check if the result is a valid asic-s
-        container = asic.ASiCS(file_result)
-        self.assertTrue(container.valid)
+        ret = cli.main([name])
+        logging.info("Ret of cli.main(): %s" % repr(ret))
+        self.assertTrue(os.path.exists(ret['pathfile']))
+        self.assertTrue('PENDING' == ret['result'])
         # cleaning
-        os.remove(file_result)
+        os.remove(ret['pathfile'])
 
     def test_m4_main_files(self):
         ''' Test a list of files as param '''
@@ -109,14 +102,12 @@ class TestMain(unittest.TestCase):
         names = glob(os.path.join("*.py"))
         logging.info("##### Testing m4: list of files(%s) as param" % names)
         self.assertFalse(len(names) < 2)
-        file_result = cli.there_can_be_only_one(names)
-        logging.info("Result of cli.there_can_be_only_one(): %s" % file_result)
-        self.assertTrue(os.path.exists(file_result))
-        # check if the result is a valid asic-s
-        container = asic.ASiCS(file_result)
-        self.assertTrue(container.valid)
+        ret = cli.main(names)
+        logging.info("Ret of cli.main(): %s" % repr(ret))
+        self.assertTrue(os.path.exists(ret['pathfile']))
+        self.assertTrue('PENDING' == ret['result'])
         # cleaning
-        os.remove(file_result)
+        os.remove(ret['pathfile'])
 
     def test_m5_main_one_empty(self):
         ''' Test one empty file as param '''
@@ -134,14 +125,12 @@ class TestMain(unittest.TestCase):
         self.assertFalse(len(names) < 2)
         for name in names:
             self.assertTrue(os.path.isfile(name))
-        file_result = cli.main(names)
-        logging.info("Result of cli.main(): %s" % file_result)
-        self.assertTrue(file_result is not None)
-        # check if the result is a valid asic-s
-        container = asic.ASiCS(file_result)
-        self.assertTrue(container.valid)
+        ret = cli.main(names)
+        logging.info("Ret of cli.main(): %s" % repr(ret))
+        self.assertTrue(os.path.exists(ret['pathfile']))
+        self.assertTrue('PENDING' == ret['result'])
         # cleaning
-        os.remove(file_result)
+        os.remove(ret['pathfile'])
 
     def test_m7_main_dir_of_empty(self):
         ''' Test a dir of empty files as param '''
@@ -149,15 +138,12 @@ class TestMain(unittest.TestCase):
         name = os.path.join("tests", "empty")
         logging.info("##### Testing m7: dir of empty files(%s) as param" % name)
         self.assertTrue(os.path.isdir(name))
-        file_result = cli.main([name])
-        logging.info("Result of cli.main(): %s" % file_result)
-        self.assertTrue(file_result is not None)
-        # check if the result is a valid asic-s
-        container = asic.ASiCS(file_result)
-        self.assertTrue(container.valid)
+        ret = cli.main([name])
+        logging.info("Ret of cli.main(): %s" % repr(ret))
+        self.assertTrue(os.path.exists(ret['pathfile']))
+        self.assertTrue('PENDING' == ret['result'])
         # cleaning
-        os.remove(file_result)
-
+        os.remove(ret['pathfile'])
 
     def test_m8_main_one_special(self):
         ''' Test one special file as param '''

@@ -178,6 +178,7 @@ def main(pathfiles):
                 (result_pathfile, container.status['result'])
         logging.info(msg)
 
-        return container.status['result']
+        container.status['pathfile'] = container.pathfile
+        return container.status
 
     return None
