@@ -238,7 +238,7 @@ class ASiCS():
         # add tst
         if not os.path.exists(tst_pf):
 
-            with open(data_pf, mode='r') as data_object:
+            with open(data_pf, mode='rb') as data_object:
                 data = data_object.read()
 
             if len(data) > 0:
