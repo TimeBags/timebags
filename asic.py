@@ -77,8 +77,9 @@ class ASiCS():
         self.valid = False
         self.dataobject = None
         self.mimetype = ""
-        # result  = UNKNOWN | INCOMPLETE | PENDING | UPGRADED | CORRUPTED
-        # asic-s  = description string
+        # result  = UNKNOWN | INCOMPLETE | PENDING | UPGRADED
+        # FIXME: when ots are not upgradable in no way, will be also a CORRUPTED result
+        # asic-s  = description string to explain many cases of not valid asic-s
         # dat-tst = (<url>, <date_time>)
         # *-ots   = ('PENDING', None) | ('BTC:<block height>', <merkle-root>)
         self.status = {'result': 'UNKNOWN', 'asic-s': None, 'dat-tst': (None, None),
@@ -192,11 +193,12 @@ class ASiCS():
 
             if len(data) > 0:
 
-                token = tst.get_token(data)
-                if token is not None:
+                ret = tst.get_token(data)
+                if ret is not None:
+                    token, date_time, url = ret
                     with open(tst_pf, mode='xb') as tst_fd:
                         tst_fd.write(token)
-                    # TODO: update status
+                    self.status['dat-tst'] = (url, date_time)
                 else:
                     msg = "timestamping failed"
                     logging.critical(msg)
@@ -213,7 +215,7 @@ class ASiCS():
             #logging.debug(result)
             data_ots_new = os.path.join(tmpdir, self.dataobject + ".ots")
             shutil.move(data_ots_new, data_ots_pf)
-            # TODO: update status
+            self.status['dat-ots'] = ('PENDING', None)
 
 
         # add tst ots
@@ -223,26 +225,67 @@ class ASiCS():
                 # TODO: new ots function to call
                 ots.ots_cmd(["stamp", "--timeout", "20", tst_pf])
                 #logging.debug(result)
-                # TODO: update status
+                self.status['tst-ots'] = ('PENDING', None)
 
 
 
-    def check_timestamps_presence(self, tmpdir):
-        ''' Check for missing timestamps '''
 
 
-        data_pf = os.path.join(tmpdir, self.dataobject)
-        tst_pf = os.path.join(tmpdir, TIMESTAMP)
+
+
+
+    def upgrade_ots(self, tmpdir):
+        ''' Upgrade opentimestamps '''
+
+
         data_ots_pf = os.path.join(tmpdir, "META-INF", self.dataobject + ".ots")
+        data_ots_tmp = os.path.join(tmpdir, self.dataobject + ".ots")
         tst_ots_pf = os.path.join(tmpdir, TIMESTAMP + ".ots")
 
-        if not os.path.exists(tst_pf) or not os.path.exists(data_ots_pf) \
-            or not os.path.exists(tst_ots_pf):
-            self.status['result'] = 'INCOMPLETE'
-            logging.critical('ASIC-S not completed')
-        else:
-            self.status['result'] = 'PENDING'
-            logging.info('ASIC-S completed')
+
+        # upgrade data ots
+        shutil.move(data_ots_pf, data_ots_tmp)
+        # TODO: new ots function to call
+        ots.ots_cmd(["upgrade", "--timeout", "20", data_ots_pf])
+        #logging.debug(result)
+        shutil.move(data_ots_tmp, data_ots_pf)
+        #self.status['dat-ots'] = ('PENDING', None)
+
+
+        # upgrade tst ots
+        # TODO: new ots function to call
+        ots.ots_cmd(["upgrade", "--timeout", "20", tst_ots_pf])
+        #logging.debug(result)
+        #self.status['tst-ots'] = ('PENDING', None)
+
+
+
+
+    def check_timestamps_status(self, tmpdir):
+        ''' Check for timestamps status'''
+
+
+        if self.status['result'] in ('UNKNOWN', 'INCOMPLETE'):
+            data_pf = os.path.join(tmpdir, self.dataobject)
+            tst_pf = os.path.join(tmpdir, TIMESTAMP)
+            data_ots_pf = os.path.join(tmpdir, "META-INF", self.dataobject + ".ots")
+            tst_ots_pf = os.path.join(tmpdir, TIMESTAMP + ".ots")
+
+            if not os.path.exists(tst_pf) or not os.path.exists(data_ots_pf) \
+                or not os.path.exists(tst_ots_pf):
+                self.status['result'] = 'INCOMPLETE'
+                logging.critical('ASIC-S not completed')
+            else:
+                self.status['result'] = 'PENDING'
+                logging.info('ASIC-S completed and pending')
+
+        elif self.status['result'] == 'PENDING':
+            _, res1 = self.status['dat-ots']
+            _, res2 = self.status['tst-ots']
+            if res1 is not None and res2 is not None:
+                self.status['result'] == 'UPGRADED'
+                logging.info('ASIC-S completed and upgraded')
+
 
 
     def process_timestamps(self):
@@ -274,17 +317,21 @@ class ASiCS():
                     date_time = time.mktime(date_time + (0, 0, -1))
                     os.utime(name, (date_time, date_time))
 
-                # apply changes to extracted files
+                # process to complete asic-s
                 self.add_missing_items(tmpdir)
-                self.add_timestamps(tmpdir)
-                self.check_timestamps_presence(tmpdir)
+                self.check_timestamps_status(tmpdir)
+                if self.status['result'] == 'INCOMPLETE':
+                    self.add_timestamps(tmpdir)
+                    self.check_timestamps_status(tmpdir)
 
-                if self.status['result'] == 'PENDING':
+                # process to upgrade
+                elif self.status['result'] == 'PENDING':
+                    # TODO: upgrade
+                    #self.upgrade_ots(tmpdir)
                     pass
-                    # FIXME: why not verify what is present?
-                    #        move verify inside add_timestamps?
-                    # TBD: verify/upgrade
-                    # TBD:  Verify tst whenever it is possible.
+                elif self.status['result'] == 'UPGRADED':
+                    pass
+                    # TBE:  Verify tst whenever it is possible.
                     #       Generally I can verify a tst previously generated by others
                     #       only if I have a trusted copy of the certificate of the TSA
                     #       that issued the time stamp token.

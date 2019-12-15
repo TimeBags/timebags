@@ -89,11 +89,11 @@ def get_token(data):
     if tst is not None:
         msg = "TSA %s timestamped dataobject at: %s" % (tsa['url'], get_timestamp(tst))
         logging.info(msg)
-    else:
-        msg = "none of the TSA provided a timestamp"
-        logging.critical(msg)
+        return (tst, get_timestamp(tst), tsa['url'])
 
-    return tst
+    msg = "none of the TSA provided a timestamp"
+    logging.critical(msg)
+    return None
 
 # def verify_token(data):
 # verify calling remote timestamper?
