@@ -32,25 +32,25 @@ import inspect
 from struct import unpack
 import logging
 from rfc3161ng import RemoteTimestamper, get_timestamp
-
+from cryptography.exceptions import InvalidSignature
 
 def get_token(data):
     ''' Call a Remote TimeStamper to obtain a ts token of data '''
 
     # TBD: read the list from a config file and append cli params
     tsa_list = [{
-        'url' : "https://freetsa.org/tsrx",
-        'tsafile' : "freetsa.crt",
-        'cafile' : None,
+        'url' : "http://timestamp.comodoca.com/rfc3161",
+        'tsacrt' : "freetsa.crt",
+        'cacrt' : None,
         'username' : None,
         'password' : None,
         'timeout' : 10,
         'hashname' : 'sha256',
-        'include_tsa_cert' : True
+        'include_tsa_cert' : False
     }, {
         'url' : "https://freetsa.org/tsr",
-        'tsafile' : "freetsa.crt",
-        'cafile' : None,
+        'tsacrt' : "freetsax.crt",
+        'cacrt' : None,
         'username' : None,
         'password' : None,
         'timeout' : 10,
@@ -60,10 +60,14 @@ def get_token(data):
 
     app_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
     for tsa in tsa_list:
-        tsa_pathfile = os.path.join(app_dir, tsa['tsafile'])
+        if not os.path.isfile(tsa['tsacrt']):
+            msg = "TSA cert file missing for %s" % tsa['url']
+            logging.info(msg)
+            continue
+        tsa_pathfile = os.path.join(app_dir, tsa['tsacrt'])
         with open(tsa_pathfile, 'rb') as tsa_fh:
             certificate = tsa_fh.read()
-        timestamper = RemoteTimestamper(tsa['url'], certificate=certificate, cafile=tsa['cafile'],
+        timestamper = RemoteTimestamper(tsa['url'], certificate=certificate, cafile=tsa['cacrt'],
                                         hashname=tsa['hashname'], timeout=tsa['timeout'],
                                         username=tsa['username'], password=tsa['password'],
                                         include_tsa_certificate=tsa['include_tsa_cert'])
@@ -76,6 +80,10 @@ def get_token(data):
             break
         except RuntimeError as err:
             logging.debug(err)
+            tst = None
+        except InvalidSignature:
+            msg = "Invalid signature in timestamp from %s" % tsa['url']
+            logging.info(msg)
             tst = None
 
     if tst is not None:
