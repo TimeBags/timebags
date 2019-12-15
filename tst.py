@@ -49,7 +49,7 @@ def get_token(data):
         'include_tsa_cert' : False
     }, {
         'url' : "https://freetsa.org/tsr",
-        'tsacrt' : "freetsax.crt",
+        'tsacrt' : "freetsa.crt",
         'cacrt' : None,
         'username' : None,
         'password' : None,
@@ -57,6 +57,7 @@ def get_token(data):
         'hashname' : 'sha256',
         'include_tsa_cert' : True
     }]
+    tst = None
 
     app_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
     for tsa in tsa_list:
@@ -77,14 +78,13 @@ def get_token(data):
         logging.debug(msg)
         try:
             tst = timestamper.timestamp(data=data, nonce=nonce)
-            break
         except RuntimeError as err:
             logging.debug(err)
-            tst = None
         except InvalidSignature:
             msg = "Invalid signature in timestamp from %s" % tsa['url']
             logging.info(msg)
-            tst = None
+        else:
+            break
 
     if tst is not None:
         msg = "TSA %s timestamped dataobject at: %s" % (tsa['url'], get_timestamp(tst))

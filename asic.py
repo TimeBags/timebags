@@ -77,10 +77,10 @@ class ASiCS():
         self.valid = False
         self.dataobject = None
         self.mimetype = ""
-        # result  = UNKNOWN | INCOMPLETE | PENDING | UPGRADED | VERIFIED | CORRUPTED
+        # result  = UNKNOWN | INCOMPLETE | PENDING | UPGRADED | CORRUPTED
         # asic-s  = description string
-        # dat-tst = (<date>, <verified>)
-        # *-ots   = ('PENDING', None) | ('BTC:<block height>', <verified>)
+        # dat-tst = (<url>, <date_time>)
+        # *-ots   = ('PENDING', None) | ('BTC:<block height>', <merkle-root>)
         self.status = {'result': 'UNKNOWN', 'asic-s': None, 'dat-tst': (None, None),
                        'dat-ots': (None, None), 'tst-ots': (None, None)}
 
@@ -196,6 +196,7 @@ class ASiCS():
                 if token is not None:
                     with open(tst_pf, mode='xb') as tst_fd:
                         tst_fd.write(token)
+                    # TODO: update status
                 else:
                     msg = "timestamping failed"
                     logging.critical(msg)
@@ -212,6 +213,7 @@ class ASiCS():
             #logging.debug(result)
             data_ots_new = os.path.join(tmpdir, self.dataobject + ".ots")
             shutil.move(data_ots_new, data_ots_pf)
+            # TODO: update status
 
 
         # add tst ots
@@ -221,6 +223,7 @@ class ASiCS():
                 # TODO: new ots function to call
                 ots.ots_cmd(["stamp", "--timeout", "20", tst_pf])
                 #logging.debug(result)
+                # TODO: update status
 
 
 
@@ -302,4 +305,7 @@ class ASiCS():
             # replace old zip with the new one
             shutil.move(new_pathfile, self.pathfile)
 
-        return self.status['result']
+        ret = self.status['result']
+        msg = "asic.process_timestamps() return value: %s" % ret
+        logging.debug(msg)
+        return ret
