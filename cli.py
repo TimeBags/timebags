@@ -173,8 +173,12 @@ def main(pathfiles):
                 (result_pathfile, container.valid, container.status['asic-s'])
         logging.info(msg)
 
-        # if success return the result pathfile
-        if container.complete():
+        container.process_timestamps()
+        msg = "asic %s, valid: %s, status: %s" % \
+                (result_pathfile, container.valid, container.status['asic-s'])
+        logging.info(msg)
+        if container.status['result'] != 'ERROR':
+            # if success return the result pathfile
             return result_pathfile
 
     return None

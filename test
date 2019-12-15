@@ -54,7 +54,8 @@ class TestAsic(unittest.TestCase):
                 shutil.copyfile(filename, filename_copy)
                 container = asic.ASiCS(filename_copy)
                 logging.info("to be completed file: %s" % filename_copy)
-                self.assertTrue(container.complete())
+                #self.assertTrue(container.complete())
+                self.assertTrue('PENDING' == container.process_timestamps())
 
 
 class TestMain(unittest.TestCase):

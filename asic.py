@@ -52,6 +52,10 @@ import os.path
 import zipfile
 import tempfile
 import logging
+import shutil
+import time
+from pathlib import Path
+
 import tst
 import ots
 
@@ -73,10 +77,12 @@ class ASiCS():
         self.valid = False
         self.dataobject = None
         self.mimetype = ""
-        # TST values: None | (<date>, <verified>)
-        # OTS values: None | ('Pending', None) | ('BTC:<block height>', <verified>)
-        self.status = {'result': None, 'asic-s': None, 'dat-tst': None,
-                       'dat-ots': None, 'tst-ots': None}
+        # result  = UNKNOWN | INCOMPLETE | PENDING | UPGRADED | VERIFIED | CORRUPTED
+        # asic-s  = description string
+        # dat-tst = (<date>, <verified>)
+        # *-ots   = ('PENDING', None) | ('BTC:<block height>', <verified>)
+        self.status = {'result': 'UNKNOWN', 'asic-s': None, 'dat-tst': (None, None),
+                       'dat-ots': (None, None), 'tst-ots': (None, None)}
 
         if not zipfile.is_zipfile(self.pathfile):
             self.status['asic-s'] = "%s is not a zip archive" % self.pathfile
@@ -195,12 +201,12 @@ class ASiCS():
                 ots.token(container, self.dataobject, dataobject_ots)
                 ots.token(container, TIMESTAMP, TIMESTAMP_OTS)
 
-            result = set((TIMESTAMP, TIMESTAMP_OTS, dataobject_ots)) <= set(container.namelist())
+            ret = set((TIMESTAMP, TIMESTAMP_OTS, dataobject_ots)) <= set(container.namelist())
             logging.debug(repr(set((TIMESTAMP, TIMESTAMP_OTS, dataobject_ots))))
             logging.debug(repr(set(container.namelist())))
-            logging.debug(result)
+            logging.debug(ret)
 
-        return result
+        return ret
 
 
 
@@ -211,16 +217,25 @@ class ASiCS():
         # add mimetype file if missed
         mimetype_pf = os.path.join(tmpdir, "mimetype")
         if not os.path.exists(mimetype_pf):
-            with open(mimetype_pf, mode='xb') as mimetype_fd:
+            with open(mimetype_pf, mode='x') as mimetype_fd:
                 mimetype_fd.write(MIMETYPE)
 
         # add META-INF dir if missed
         if not os.path.isdir(os.path.join(tmpdir, "META-INF")):
             os.makedirs(os.path.join(tmpdir, "META-INF"))
 
-        # add tst
+
+
+    def add_timestamps(self, tmpdir):
+        ''' Add missing items to complete ASIC-S '''
+
+
         data_pf = os.path.join(tmpdir, self.dataobject)
-        tst_pf = os.path.join(tmpdir, "META-INF", TIMESTAMP)
+        tst_pf = os.path.join(tmpdir, TIMESTAMP)
+        data_ots_pf = os.path.join(tmpdir, "META-INF", self.dataobject + ".ots")
+        tst_ots_pf = os.path.join(tmpdir, TIMESTAMP + ".ots")
+
+        # add tst
         if not os.path.exists(tst_pf):
 
             with open(data_pf, mode='r') as data_object:
@@ -240,23 +255,42 @@ class ASiCS():
                 msg = "Error: can't timestamp an empty dataobject: %s" % self.dataobject
                 logging.critical(msg)
 
-        data_ots_pf = os.path.join(tmpdir, self.dataobject + ".ots")
-        tst_ots_pf = os.path.join(tmpdir, "META-INF", TIMESTAMP + ".ots")
+
+        # add data ots
+        if not os.path.exists(data_ots_pf):
+            # TODO: new ots function to call
+            ots.ots_cmd(["stamp", "--timeout", "20", data_pf])
+            #logging.debug(result)
+            data_ots_new = os.path.join(tmpdir, self.dataobject + ".ots")
+            shutil.move(data_ots_new, data_ots_pf)
+
+
+        # add tst ots
         if os.path.exists(tst_pf):
             # if tst is present then move on adding or upgrading ots
-            if not os.path.exists(data_ots_pf):
-                # TODO: new ots function to call
-                ots.ots_cmd(["stamp", "--timeout", "20", data_pf])
-                #logging.debug(result)
             if not os.path.exists(tst_ots_pf):
                 # TODO: new ots function to call
                 ots.ots_cmd(["stamp", "--timeout", "20", tst_pf])
                 #logging.debug(result)
 
+
+
+    def check_timestamps_presence(self, tmpdir):
+        ''' Check for missing timestamps '''
+
+
+        data_pf = os.path.join(tmpdir, self.dataobject)
+        tst_pf = os.path.join(tmpdir, TIMESTAMP)
+        data_ots_pf = os.path.join(tmpdir, "META-INF", self.dataobject + ".ots")
+        tst_ots_pf = os.path.join(tmpdir, TIMESTAMP + ".ots")
+
         if not os.path.exists(tst_pf) or not os.path.exists(data_ots_pf) \
             or not os.path.exists(tst_ots_pf):
             self.status['result'] = 'INCOMPLETE'
             logging.critical('ASIC-S not completed')
+        else:
+            self.status['result'] = 'PENDING'
+            logging.info('ASIC-S completed')
 
 
     def process_timestamps(self):
@@ -273,19 +307,30 @@ class ASiCS():
                 name_number += 1
                 new_pathfile = new_pathfile + "_" + str(name_number)
 
-            # create new zip in tempdir
-            # new_pathfile = os.path.join(tmpdir, "new.zip")
-
             with zipfile.ZipFile(self.pathfile, mode='r') as container:
-                container.extractall(path=tmpdir)
+
+                # extract all from zip preserving date and time
+                for item in container.infolist():
+                    name, date_time = item.filename, item.date_time
+                    name = os.path.join(tmpdir, name)
+                    folder = os.path.dirname(name)
+                    if not os.path.exists(folder):
+                        os.makedirs(folder)
+                    with open(name, mode='wb') as out_item:
+                        with container.open(item.filename, mode='r') as zip_item:
+                            out_item.write(zip_item.read())
+                    date_time = time.mktime(date_time + (0, 0, -1))
+                    os.utime(name, (date_time, date_time))
 
                 # apply changes to extracted files
                 self.add_missing_items(tmpdir)
+                self.add_timestamps(tmpdir)
+                self.check_timestamps_presence(tmpdir)
 
-                if self.status['result'] != 'INCOMPLETE':
+                if self.status['result'] == 'PENDING':
                     pass
                     # FIXME: why not verify what is present?
-                    #        move verify inside add_missing items?
+                    #        move verify inside add_timestamps?
                     # TBD: verify/upgrade
                     # TBD:  Verify tst whenever it is possible.
                     #       Generally I can verify a tst previously generated by others
@@ -297,15 +342,15 @@ class ASiCS():
                 with zipfile.ZipFile(new_pathfile, mode='x') as new_zip:
                     # set ASIC-S comment
                     new_zip.comment = ZIPCOMMENT.encode()
-                    for item in container.infolist():
-                        # new_zip.write(item, container.read(item.filename))
-                        with open(os.path.join(tmpdir, item), mode="rb") as new_item:
-                            new_zip.write(item, new_item.read())
+                    # zip all files
                     for root, _, files in os.walk(tmpdir):
                         for leaf in files:
-                            new_zip.write(os.path.join(root, leaf))
+                            leaf_pf = os.path.join(root, leaf)
+                            # remove tmpdir path from name in zip
+                            leaf_zip = str(Path(leaf_pf).relative_to(tmpdir))
+                            new_zip.write(leaf_pf, leaf_zip)
 
-            # replace old zip with the new
-            # shutil.move(new_pathfile, self.pathfile)
+            # replace old zip with the new one
+            shutil.move(new_pathfile, self.pathfile)
 
-        return self.status
+        return self.status['result']
