@@ -53,7 +53,9 @@ def main():
     elif len(sys.argv) > 1:
         ret = cli.main(sys.argv[1:])
     if ret is not None:
+        print(ret)
         return 0
+    print("ERROR: check log for details")
     return 1
 
 

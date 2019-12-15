@@ -174,11 +174,10 @@ def main(pathfiles):
         logging.info(msg)
 
         container.process_timestamps()
-        msg = "asic %s, valid: %s, status: %s" % \
-                (result_pathfile, container.valid, container.status['asic-s'])
+        msg = "asic %s, result: %s" % \
+                (result_pathfile, container.status['result'])
         logging.info(msg)
-        if container.status['result'] != 'ERROR':
-            # if success return the result pathfile
-            return result_pathfile
+
+        return container.status['result']
 
     return None
