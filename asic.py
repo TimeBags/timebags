@@ -67,6 +67,72 @@ TIMESTAMP_OTS = TIMESTAMP + ".ots"
 MIMETYPE = "application/vnd.etsi.asic-s+zip"
 ZIPCOMMENT = "mimetype=application/vnd.etsi.asic-s+zip"
 
+
+
+def add_missing_items(tmpdir):
+    ''' Add missing items to complete ASIC-S '''
+
+
+    # add mimetype file if missed
+    mimetype_pf = os.path.join(tmpdir, "mimetype")
+    if not os.path.exists(mimetype_pf):
+        with open(mimetype_pf, mode='x') as mimetype_fd:
+            mimetype_fd.write(MIMETYPE)
+
+    # add META-INF dir if missed
+    if not os.path.isdir(os.path.join(tmpdir, "META-INF")):
+        os.makedirs(os.path.join(tmpdir, "META-INF"))
+
+
+
+def get_new_name(pathfile):
+    ''' Get a new name '''
+
+    # find a name not already used for the new zip
+    new_pathfile = pathfile + "_new"
+    name_number = 0
+    while os.path.exists(new_pathfile):
+        # if file exists, then increment number suffix
+        name_number += 1
+        new_pathfile = new_pathfile + "_" + str(name_number)
+
+    return new_pathfile
+
+
+
+def unzip(container, tmpdir):
+    ''' unzip container into directory '''
+
+    # extract all from zip preserving date and time
+    for item in container.infolist():
+        name, date_time = item.filename, item.date_time
+        name = os.path.join(tmpdir, name)
+        folder = os.path.dirname(name)
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        with open(name, mode='wb') as out_item:
+            with container.open(item.filename, mode='r') as zip_item:
+                out_item.write(zip_item.read())
+        date_time = time.mktime(date_time + (0, 0, -1))
+        os.utime(name, (date_time, date_time))
+
+
+def zipdir(new_pathfile, tmpdir):
+    ''' zip a directory '''
+
+    with zipfile.ZipFile(new_pathfile, mode='x') as new_zip:
+        # set ASIC-S comment
+        new_zip.comment = ZIPCOMMENT.encode()
+        # zip all files
+        for root, _, files in os.walk(tmpdir):
+            for leaf in files:
+                leaf_pf = os.path.join(root, leaf)
+                # remove tmpdir path from name in zip
+                leaf_zip = str(Path(leaf_pf).relative_to(tmpdir))
+                new_zip.write(leaf_pf, leaf_zip)
+
+
+
 class ASiCS():
     ''' Class for managing ASiC-S files '''
 
@@ -160,22 +226,6 @@ class ASiCS():
 
 
 
-    def add_missing_items(self, tmpdir):
-        ''' Add missing items to complete ASIC-S '''
-
-
-        # add mimetype file if missed
-        mimetype_pf = os.path.join(tmpdir, "mimetype")
-        if not os.path.exists(mimetype_pf):
-            with open(mimetype_pf, mode='x') as mimetype_fd:
-                mimetype_fd.write(MIMETYPE)
-
-        # add META-INF dir if missed
-        if not os.path.isdir(os.path.join(tmpdir, "META-INF")):
-            os.makedirs(os.path.join(tmpdir, "META-INF"))
-
-
-
     def add_timestamps(self, tmpdir):
         ''' Add missing items to complete ASIC-S '''
 
@@ -229,11 +279,6 @@ class ASiCS():
 
 
 
-
-
-
-
-
     def upgrade_ots(self, tmpdir):
         ''' Upgrade opentimestamps '''
 
@@ -266,7 +311,6 @@ class ASiCS():
 
 
         if self.status['result'] in ('UNKNOWN', 'INCOMPLETE'):
-            data_pf = os.path.join(tmpdir, self.dataobject)
             tst_pf = os.path.join(tmpdir, TIMESTAMP)
             data_ots_pf = os.path.join(tmpdir, "META-INF", self.dataobject + ".ots")
             tst_ots_pf = os.path.join(tmpdir, TIMESTAMP + ".ots")
@@ -274,7 +318,7 @@ class ASiCS():
             if not os.path.exists(tst_pf) or not os.path.exists(data_ots_pf) \
                 or not os.path.exists(tst_ots_pf):
                 self.status['result'] = 'INCOMPLETE'
-                logging.critical('ASIC-S not completed')
+                logging.info('ASIC-S not completed')
             else:
                 self.status['result'] = 'PENDING'
                 logging.info('ASIC-S completed and pending')
@@ -283,7 +327,7 @@ class ASiCS():
             _, res1 = self.status['dat-ots']
             _, res2 = self.status['tst-ots']
             if res1 is not None and res2 is not None:
-                self.status['result'] == 'UPGRADED'
+                self.status['result'] = 'UPGRADED'
                 logging.info('ASIC-S completed and upgraded')
 
 
@@ -294,31 +338,12 @@ class ASiCS():
 
         with tempfile.TemporaryDirectory() as tmpdir:
 
-            # find a name not already used for the new zip
-            new_pathfile = self.pathfile + "_new"
-            name_number = 0
-            while os.path.exists(new_pathfile):
-                # if file exists, then increment number suffix
-                name_number += 1
-                new_pathfile = new_pathfile + "_" + str(name_number)
-
             with zipfile.ZipFile(self.pathfile, mode='r') as container:
 
-                # extract all from zip preserving date and time
-                for item in container.infolist():
-                    name, date_time = item.filename, item.date_time
-                    name = os.path.join(tmpdir, name)
-                    folder = os.path.dirname(name)
-                    if not os.path.exists(folder):
-                        os.makedirs(folder)
-                    with open(name, mode='wb') as out_item:
-                        with container.open(item.filename, mode='r') as zip_item:
-                            out_item.write(zip_item.read())
-                    date_time = time.mktime(date_time + (0, 0, -1))
-                    os.utime(name, (date_time, date_time))
+                unzip(container, tmpdir)
 
                 # process to complete asic-s
-                self.add_missing_items(tmpdir)
+                add_missing_items(tmpdir)
                 self.check_timestamps_status(tmpdir)
                 if self.status['result'] == 'INCOMPLETE':
                     self.add_timestamps(tmpdir)
@@ -329,6 +354,8 @@ class ASiCS():
                     # TODO: upgrade
                     #self.upgrade_ots(tmpdir)
                     pass
+
+                # process to verify
                 elif self.status['result'] == 'UPGRADED':
                     pass
                     # TBE:  Verify tst whenever it is possible.
@@ -338,16 +365,8 @@ class ASiCS():
                     #       EU QTSP are listed in public lists with their certs.
                     #       A trusted copy of the root CA certificate is needed too.
 
-                with zipfile.ZipFile(new_pathfile, mode='x') as new_zip:
-                    # set ASIC-S comment
-                    new_zip.comment = ZIPCOMMENT.encode()
-                    # zip all files
-                    for root, _, files in os.walk(tmpdir):
-                        for leaf in files:
-                            leaf_pf = os.path.join(root, leaf)
-                            # remove tmpdir path from name in zip
-                            leaf_zip = str(Path(leaf_pf).relative_to(tmpdir))
-                            new_zip.write(leaf_pf, leaf_zip)
+                new_pathfile = get_new_name(self.pathfile)
+                zipdir(new_pathfile, tmpdir)
 
             # replace old zip with the new one
             shutil.move(new_pathfile, self.pathfile)
