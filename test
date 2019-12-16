@@ -35,8 +35,9 @@ class TestAsic(unittest.TestCase):
         logging.info("##### Testing: asic-s NOT valid files asics_notvalid_*.zip")
         for filename in sorted(glob(os.path.join("tests", "asics", "asics_notvalid_*.zip"))):
             container = asic.ASiCS(filename)
-            logging.info("##### Testing: file(%s) valid(%s) status(%s)" % \
-                    (filename, str(container.valid), container.status))
+            msg = "##### Testing: file(%s) valid(%s) status(%s)" % \
+                    (filename, str(container.valid), container.status['asic-s'])
+            logging.info(msg)
             self.assertFalse(container.valid)
 
 
@@ -46,15 +47,18 @@ class TestAsic(unittest.TestCase):
         logging.info("##### Testing asic-s valid files asics_valid_*.zip")
         for filename in sorted(glob(os.path.join("tests", "asics", "asics_valid_*.zip"))):
             container = asic.ASiCS(filename)
-            logging.info("##### Testing file(%s) valid(%s) status(%s)" % \
-                    (filename, str(container.valid), container.status))
+            msg = "##### Testing file(%s) valid(%s) status(%s)" % \
+                    (filename, str(container.valid), container.status['asic-s'])
+            logging.info(msg)
             self.assertTrue(container.valid)
             with tempfile.TemporaryDirectory() as tmpdir:
                 filename_copy = os.path.join(tmpdir, os.path.basename(filename))
                 shutil.copyfile(filename, filename_copy)
                 container = asic.ASiCS(filename_copy)
-                logging.info("to be completed file: %s" % filename_copy)
-                self.assertTrue('PENDING' == container.process_timestamps())
+                msg = "to be completed file: %s" % filename_copy
+                logging.info(msg)
+                ret = container.process_timestamps()
+                self.assertTrue(ret == 'PENDING')
 
 
 class TestMain(unittest.TestCase):
@@ -64,35 +68,40 @@ class TestMain(unittest.TestCase):
         ''' Test a regular file as single param '''
 
         name = "Readme.md"
-        logging.info("##### Testing m1: regular file(%s) as single param" % name)
+        msg = "##### Testing m1: regular file(%s) as single param"
         self.assertTrue(os.path.exists(name))
         ret = cli.main([name])
-        logging.info("Ret of cli.main(): %s" % repr(ret))
+        msg = "Ret of cli.main(): %s" % repr(ret)
+        logging.info(msg)
         self.assertTrue(os.path.exists(ret['pathfile']))
-        self.assertTrue('PENDING' == ret['result'])
+        self.assertTrue(ret['result'] == 'PENDING')
         # cleaning
         os.remove(ret['pathfile'])
 
     def test__m2_main_none(self):
         ''' Test a non-existent file as single param '''
 
-        name = next(tempfile._get_candidate_names())
-        logging.info("##### Testing m2: non-existent file(%s) as single param" % name)
+        name = next(tempfile._get_candidate_names()) # pylint: disable=W0212
+        msg = "##### Testing m2: non-existent file(%s) as single param" % name
+        logging.info(msg)
         self.assertFalse(os.path.exists(name))
         ret = cli.main([name])
-        logging.info("Ret of cli.main(): %s" % repr(ret))
+        msg = "Ret of cli.main(): %s" % repr(ret)
+        logging.info(msg)
         self.assertTrue(ret is None)
 
     def test_m3_main_dir(self):
         ''' Test a dir (not a regular file) as single param '''
 
         name = os.path.join("tests", "example_dir")
-        logging.info("##### Testing m3: dir(%s) as single param" % name)
+        msg = "##### Testing m3: dir(%s) as single param" % name
+        logging.info(msg)
         self.assertTrue(os.path.isdir(name))
         ret = cli.main([name])
-        logging.info("Ret of cli.main(): %s" % repr(ret))
+        msg = "Ret of cli.main(): %s" % repr(ret)
+        logging.info(msg)
         self.assertTrue(os.path.exists(ret['pathfile']))
-        self.assertTrue('PENDING' == ret['result'])
+        self.assertTrue(ret['result'] == 'PENDING')
         # cleaning
         os.remove(ret['pathfile'])
 
@@ -100,12 +109,14 @@ class TestMain(unittest.TestCase):
         ''' Test a list of files as param '''
 
         names = glob(os.path.join("*.py"))
-        logging.info("##### Testing m4: list of files(%s) as param" % names)
+        msg = "##### Testing m4: list of files(%s) as param" % names
+        logging.info(msg)
         self.assertFalse(len(names) < 2)
         ret = cli.main(names)
-        logging.info("Ret of cli.main(): %s" % repr(ret))
+        msg = "Ret of cli.main(): %s" % repr(ret)
+        logging.info(msg)
         self.assertTrue(os.path.exists(ret['pathfile']))
-        self.assertTrue('PENDING' == ret['result'])
+        self.assertTrue(ret['result'] == 'PENDING')
         # cleaning
         os.remove(ret['pathfile'])
 
@@ -113,7 +124,8 @@ class TestMain(unittest.TestCase):
         ''' Test one empty file as param '''
 
         name = os.path.join("tests", "empty", "data1")
-        logging.info("##### Testing m5: empty file(%s) as param" % name)
+        msg = "##### Testing m5: empty file(%s) as param" % name
+        logging.info(msg)
         self.assertTrue(os.path.isfile(name))
         self.assertTrue(cli.main([name]) is None)
 
@@ -121,14 +133,16 @@ class TestMain(unittest.TestCase):
         ''' Test two empty files as param '''
 
         names = glob(os.path.join("tests", "empty", "data*"))
-        logging.info("##### Testing m6: empty files(%s) as params" % names)
+        msg = "##### Testing m6: empty files(%s) as params" % names
+        logging.info(msg)
         self.assertFalse(len(names) < 2)
         for name in names:
             self.assertTrue(os.path.isfile(name))
         ret = cli.main(names)
-        logging.info("Ret of cli.main(): %s" % repr(ret))
+        msg = "Ret of cli.main(): %s" % repr(ret)
+        logging.info(msg)
         self.assertTrue(os.path.exists(ret['pathfile']))
-        self.assertTrue('PENDING' == ret['result'])
+        self.assertTrue(ret['result'] == 'PENDING')
         # cleaning
         os.remove(ret['pathfile'])
 
@@ -136,12 +150,14 @@ class TestMain(unittest.TestCase):
         ''' Test a dir of empty files as param '''
 
         name = os.path.join("tests", "empty")
-        logging.info("##### Testing m7: dir of empty files(%s) as param" % name)
+        msg = "##### Testing m7: dir of empty files(%s) as param" % name
+        logging.info(msg)
         self.assertTrue(os.path.isdir(name))
         ret = cli.main([name])
-        logging.info("Ret of cli.main(): %s" % repr(ret))
+        msg = "Ret of cli.main(): %s" % repr(ret)
+        logging.info(msg)
         self.assertTrue(os.path.exists(ret['pathfile']))
-        self.assertTrue('PENDING' == ret['result'])
+        self.assertTrue(ret['result'] == 'PENDING')
         # cleaning
         os.remove(ret['pathfile'])
 
@@ -149,7 +165,8 @@ class TestMain(unittest.TestCase):
         ''' Test one special file as param '''
 
         name = os.path.join(os.sep, "dev", "tty")
-        logging.info("##### Testing m8: special file(%s) as param" % name)
+        msg = "##### Testing m8: special file(%s) as param" % name
+        logging.info(msg)
         self.assertTrue(os.path.exists(name))
         self.assertFalse(os.path.isfile(name))
         self.assertTrue(cli.main([name]) is None)
@@ -158,7 +175,8 @@ class TestMain(unittest.TestCase):
         ''' Test many special files as param '''
 
         names = glob(os.path.join(os.sep, "dev", "tty?1"))
-        logging.info("##### Testing m9: special files(%s) as params" % names)
+        msg = "##### Testing m9: special files(%s) as params" % names
+        logging.info(msg)
         self.assertFalse(len(names) < 2)
         for name in names:
             self.assertTrue(os.path.exists(name))
@@ -169,7 +187,8 @@ class TestMain(unittest.TestCase):
         ''' Test a dir of special files as param '''
 
         name = os.path.join(os.sep, "dev")
-        logging.info("##### Testing m10: dir of special files(%s) as param" % name)
+        msg = "##### Testing m10: dir of special files(%s) as param" % name
+        logging.info(msg)
         self.assertTrue(os.path.isdir(name))
         self.assertTrue(cli.main([name]) is None)
 
@@ -177,13 +196,13 @@ class TestMain(unittest.TestCase):
         ''' Test not permitted files '''
 
         name = os.path.join(os.sep, "proc", "1")
-        logging.info("##### Testing m11: not permitted files(%s) as param" % name)
+        msg = "##### Testing m11: not permitted files(%s) as param" % name
+        logging.info(msg)
         self.assertTrue(os.path.isdir(name))
         self.assertTrue(cli.main([name]) is None)
 
 
 if __name__ == '__main__':
-    ''' test '''
 
     #logfile = os.path.join("tests","test.log")
     #logging.basicConfig(filename=logfile, filemode='w', level=logging.DEBUG)
