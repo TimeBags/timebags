@@ -260,22 +260,28 @@ class ASiCS():
 
         # add data ots
         if not os.path.exists(data_ots_pf):
-            # TODO: new ots function to call
-            ots.ots_cmd(["stamp", "--timeout", "20", data_pf])
-            #logging.debug(result)
-            data_ots_new = os.path.join(tmpdir, self.dataobject + ".ots")
-            shutil.move(data_ots_new, data_ots_pf)
-            self.status['dat-ots'] = ('PENDING', None)
+            if ots.ots_stamp([data_pf], timeout=20):
+                self.status['dat-ots'] = ('PENDING', None)
+                msg = "Done ots of dataobject"
+                logging.debug(msg)
+                data_ots_new = os.path.join(tmpdir, self.dataobject + ".ots")
+                shutil.move(data_ots_new, data_ots_pf)
+            else:
+                msg = "Failed ots of dataobject"
+                logging.critical(msg)
 
 
         # add tst ots
         if os.path.exists(tst_pf):
             # if tst is present then move on adding or upgrading ots
             if not os.path.exists(tst_ots_pf):
-                # TODO: new ots function to call
-                ots.ots_cmd(["stamp", "--timeout", "20", tst_pf])
-                #logging.debug(result)
-                self.status['tst-ots'] = ('PENDING', None)
+                if ots.ots_stamp([tst_pf], timeout=20):
+                    self.status['tst-ots'] = ('PENDING', None)
+                    msg = "Done ots of tst"
+                    logging.debug(msg)
+                else:
+                    msg = "Failed ots of tst"
+                    logging.critical(msg)
 
 
 
