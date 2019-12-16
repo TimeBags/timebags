@@ -41,8 +41,9 @@ def main():
         raise Exception(error)
 
     # default log to a file at DEBUG level if running in GUI mode
-    logfile = os.path.join(path_conf_dir, "debug.log")
-    logging.basicConfig(filename=logfile, filemode='w', level=logging.DEBUG)
+    #logfile = os.path.join(path_conf_dir, "debug.log")
+    #logging.basicConfig(filename=logfile, filemode='w', level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
 
 
     # TBD: it's better to have timebags-qt and timebags-cli and check sys.argv[0],

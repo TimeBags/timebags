@@ -25,44 +25,10 @@ import logging
 import asic
 import cli
 
-class TestAsic(unittest.TestCase):
-    ''' Test Asic module '''
-
-
-    def test_asics_notvalid(self):
-        ''' Test asic-s NOT valid files '''
-
-        logging.info("##### Testing: asic-s NOT valid files asics_notvalid_*.zip")
-        for filename in sorted(glob(os.path.join("tests", "asics", "asics_notvalid_*.zip"))):
-            container = asic.ASiCS(filename)
-            msg = "##### Testing: file(%s) valid(%s) status(%s)" % \
-                    (filename, str(container.valid), container.status['asic-s'])
-            logging.info(msg)
-            self.assertFalse(container.valid)
-
-
-    def test_asics_valid(self):
-        ''' Test asic-s valid files '''
-
-        logging.info("##### Testing asic-s valid files asics_valid_*.zip")
-        for filename in sorted(glob(os.path.join("tests", "asics", "asics_valid_*.zip"))):
-            container = asic.ASiCS(filename)
-            msg = "##### Testing file(%s) valid(%s) status(%s)" % \
-                    (filename, str(container.valid), container.status['asic-s'])
-            logging.info(msg)
-            self.assertTrue(container.valid)
-            with tempfile.TemporaryDirectory() as tmpdir:
-                filename_copy = os.path.join(tmpdir, os.path.basename(filename))
-                shutil.copyfile(filename, filename_copy)
-                container = asic.ASiCS(filename_copy)
-                msg = "to be completed file: %s" % filename_copy
-                logging.info(msg)
-                ret = container.process_timestamps()
-                self.assertTrue(ret == 'PENDING')
 
 
 class TestMain(unittest.TestCase):
-    ''' Test Main module '''
+    ''' Test non-asic input '''
 
     def test_m1_main_one(self):
         ''' Test a regular file as single param '''
@@ -200,6 +166,47 @@ class TestMain(unittest.TestCase):
         logging.info(msg)
         self.assertTrue(os.path.isdir(name))
         self.assertTrue(cli.main([name]) is None)
+
+
+class TestAsic(unittest.TestCase):
+    ''' Test Asic files as input '''
+
+
+    def test_asics_notvalid(self):
+        ''' Test asic-s NOT valid files '''
+
+        logging.info("##### Testing: asic-s NOT valid files asics_notvalid_*.zip")
+        for filename in sorted(glob(os.path.join("tests", "asics", "asics_notvalid_*.zip"))):
+            container = asic.ASiCS(filename)
+            msg = "##### Testing: file(%s) valid(%s) status(%s)" % \
+                    (filename, str(container.valid), container.status['asic-s'])
+            logging.info(msg)
+            self.assertFalse(container.valid)
+
+
+    def test_asics_valid(self):
+        ''' Test asic-s valid files '''
+
+        logging.info("##### Testing asic-s valid files asics_valid_*.zip")
+        for filename in sorted(glob(os.path.join("tests", "asics", "asics_valid_*.zip"))):
+            container = asic.ASiCS(filename)
+            msg = "##### Testing file(%s) valid(%s) status(%s)" % \
+                    (filename, str(container.valid), container.status['asic-s'])
+            logging.info(msg)
+            self.assertTrue(container.valid)
+            with tempfile.TemporaryDirectory() as tmpdir:
+                filename_copy = os.path.join(tmpdir, os.path.basename(filename))
+                shutil.copyfile(filename, filename_copy)
+                container = asic.ASiCS(filename_copy)
+                msg = "to be completed file: %s" % filename_copy
+                logging.info(msg)
+                ret = container.process_timestamps()
+                if "complete" in filename:
+                    self.assertTrue(ret == 'UPGRADED')
+                else:
+                    self.assertTrue(ret == 'PENDING')
+
+
 
 
 if __name__ == '__main__':

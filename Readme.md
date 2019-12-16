@@ -14,3 +14,7 @@ See cryptography.io info to build python cryptography module
 ## Command Line
 
 ./timebags <filename>
+
+# Test
+
+./test

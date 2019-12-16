@@ -147,7 +147,7 @@ class ASiCS():
         # FIXME: when ots are not upgradable in no way, will be also a CORRUPTED result
         # asic-s  = description string to explain many cases of not valid asic-s
         # dat-tst = (<url>, <date_time>)
-        # *-ots   = ('PENDING', None) | ('BTC:<block height>', <merkle-root>)
+        # *-ots   = ('PENDING', None) | (<block height>, '<merkle-root>')
         self.status = {'result': 'UNKNOWN', 'asic-s': None, 'dat-tst': (None, None),
                        'dat-ots': (None, None), 'tst-ots': (None, None)}
 
@@ -296,19 +296,26 @@ class ASiCS():
 
         # upgrade data ots
         shutil.move(data_ots_pf, data_ots_tmp)
-        # TODO: new ots function to call
-        ots.ots_cmd(["upgrade", "--timeout", "20", data_ots_pf])
-        #logging.debug(result)
+        height, merkle_root =  ots.ots_upgrade(data_ots_tmp)
+        if height is not None:
+            self.status['dat-ots'] = (height, str(merkle_root))
+            msg = "Upgraded ots of dataobject"
+            logging.debug(msg)
+        else:
+            msg = "Failed ots of dataobject"
+            logging.critical(msg)
         shutil.move(data_ots_tmp, data_ots_pf)
-        #self.status['dat-ots'] = ('PENDING', None)
 
 
         # upgrade tst ots
-        # TODO: new ots function to call
-        ots.ots_cmd(["upgrade", "--timeout", "20", tst_ots_pf])
-        #logging.debug(result)
-        #self.status['tst-ots'] = ('PENDING', None)
-
+        height, merkle_root =  ots.ots_upgrade(tst_ots_pf)
+        if height is not None:
+            self.status['tst-ots'] = (height, str(merkle_root))
+            msg = "Upgraded ots of timestamp"
+            logging.debug(msg)
+        else:
+            msg = "Failed ots of timestamp"
+            logging.critical(msg)
 
 
 
@@ -330,9 +337,10 @@ class ASiCS():
                 logging.info('ASIC-S completed and pending')
 
         elif self.status['result'] == 'PENDING':
-            _, res1 = self.status['dat-ots']
-            _, res2 = self.status['tst-ots']
-            if res1 is not None and res2 is not None:
+            dat_bh, dat_mr = self.status['dat-ots']
+            tst_bh, tst_mr = self.status['tst-ots']
+            if isinstance(dat_bh, int) and isinstance(dat_mr, str) \
+                and isinstance(tst_bh, int) and isinstance(tst_mr, str):
                 self.status['result'] = 'UPGRADED'
                 logging.info('ASIC-S completed and upgraded')
 
@@ -357,9 +365,8 @@ class ASiCS():
 
                 # process to upgrade
                 elif self.status['result'] == 'PENDING':
-                    # TODO: upgrade
-                    #self.upgrade_ots(tmpdir)
-                    pass
+                    self.upgrade_ots(tmpdir)
+                    self.check_timestamps_status(tmpdir)
 
                 # process to verify
                 elif self.status['result'] == 'UPGRADED':

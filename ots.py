@@ -18,18 +18,22 @@ import os
 import time
 import threading
 from queue import Queue, Empty
+import urllib.request
 
+from bitcoin.core import b2x
+from opentimestamps.bitcoin import BitcoinBlockHeaderAttestation
+from opentimestamps.core.notary import PendingAttestation
 from opentimestamps.core.timestamp import DetachedTimestampFile, make_merkle_tree
 from opentimestamps.core.timestamp import OpAppend, OpSHA256, Timestamp
-from opentimestamps.core.serialize import StreamSerializationContext
-
+from opentimestamps.core.serialize import StreamSerializationContext, BadMagicError
+from opentimestamps.core.serialize import StreamDeserializationContext, DeserializationError
 import opentimestamps.calendar
-
 import otsclient
 
 
 DEF_MIN_RESP = 2
 DEF_TIMEOUT = 10
+
 
 
 def remote_calendar(calendar_uri):
@@ -152,8 +156,171 @@ def ots_stamp(file_list, min_resp=DEF_MIN_RESP, timeout=DEF_TIMEOUT):
 
 
 
+def is_timestamp_complete(stamp):
+    """Determine if timestamp is complete and can be verified"""
+
+    #for msg, attestation in stamp.all_attestations():
+    for _, attestation in stamp.all_attestations():
+        if attestation.__class__ == BitcoinBlockHeaderAttestation:
+            # FIXME: we should actually check this attestation, rather than
+            # assuming it's valid
+            return True
+
+    return False
+
+
+
+
+def upgrade_timestamp(timestamp):
+    """Attempt to upgrade an incomplete timestamp to make it verifiable
+
+    Returns True if the timestamp has changed, False otherwise.
+
+    Note that this means if the timestamp that is already complete, False will
+    be returned as nothing has changed.
+    """
+
+    def directly_verified(stamp):
+        if stamp.attestations:
+            yield stamp
+        else:
+            for result_stamp in stamp.ops.values():
+                yield from directly_verified(result_stamp)
+        yield from ()
+
+    def get_attestations(stamp):
+        #return set(attest for msg, attest in stamp.all_attestations())
+        return set(attest for _, attest in stamp.all_attestations())
+
+
+    changed = False
+    existing_attestations = get_attestations(timestamp)
+    '''
+    # First, check the cache for upgrades to this timestamp. Since the cache is
+    # local, we do this very agressively, checking every single sub-timestamp
+    # against the cache.
+    def walk_stamp(stamp):
+        yield stamp
+        for sub_stamp in stamp.ops.values():
+            yield from walk_stamp(sub_stamp)
+
+    existing_attestations = get_attestations(timestamp)
+    for sub_stamp in walk_stamp(timestamp):
+        try:
+            cached_stamp = args.cache[sub_stamp.msg]
+        except KeyError:
+            continue
+        sub_stamp.merge(cached_stamp)
+
+    new_attestations_from_cache = get_attestations(timestamp).difference(existing_attestations)
+    if len(new_attestations_from_cache):
+        changed = True
+        logging.info("Got %d attestation(s) from cache" % len(new_attestations_from_cache))
+        existing_attestations.update(new_attestations_from_cache)
+        for new_att in new_attestations_from_cache:
+            logging.debug("    %r" % new_att)
+    '''
+    if not is_timestamp_complete(timestamp):
+        # Check remote calendars for upgrades.
+        #
+        # This time we only check PendingAttestations - we can't be as
+        # agressive.
+        for sub_stamp in directly_verified(timestamp):
+            for attestation in sub_stamp.attestations:
+                if attestation.__class__ == PendingAttestation:
+                    #calendar_urls = args.calendar_urls
+                    '''
+                    if calendar_urls:
+                        # FIXME: this message is incorrectly displayed, disabling for now.
+                        #
+                        # logging.debug("Attestation URI %s overridden by user-specified remote calendar(s)" % attestation.uri)
+                        pass
+                    else:
+                        if attestation.uri in args.whitelist:
+                            calendar_urls = [attestation.uri]
+                        else:
+                            logging.warning("Ignoring attestation from calendar %s: Calendar not in whitelist" % attestation.uri)
+                            continue
+                    '''
+                    commitment = sub_stamp.msg
+                    #for calendar_url in calendar_urls:
+                    for calendar_url in [attestation.uri]:
+                        logging.debug("Checking calendar %s for %s" % (attestation.uri, b2x(commitment)))
+                        calendar = remote_calendar(calendar_url)
+
+                        try:
+                            upgraded_stamp = calendar.get_timestamp(commitment)
+                        except opentimestamps.calendar.CommitmentNotFoundError as exp:
+                            logging.warning("Calendar %s: %s" % (attestation.uri, exp.reason))
+                            continue
+                        except urllib.error.URLError as exp:
+                            logging.warning("Calendar %s: %s" % (attestation.uri, exp.reason))
+                            continue
+
+                        atts_from_remote = get_attestations(upgraded_stamp)
+                        if atts_from_remote:
+                            logging.info("Got %d attestation(s) from %s" % (len(atts_from_remote), calendar_url))
+                            for att in get_attestations(upgraded_stamp):
+                                logging.debug("    %r" % att)
+
+                        new_attestations = get_attestations(upgraded_stamp).difference(existing_attestations)
+                        if new_attestations:
+                            changed = True
+                            existing_attestations.update(new_attestations)
+
+                            # FIXME: need to think about DoS attacks here
+                            #args.cache.merge(upgraded_stamp)
+                            sub_stamp.merge(upgraded_stamp)
+
+
+    return changed
+
+
+
+
+
+
+
+def ots_upgrade(filename):
+    ''' upgrade function '''
+
+    logging.debug("Upgrading %s" % filename)
+
+    try:
+        with open(filename, 'rb') as old_stamp_fd:
+            ctx = StreamDeserializationContext(old_stamp_fd)
+            detached_timestamp = DetachedTimestampFile.deserialize(ctx)
+
+    # IOError's are already handled by argparse
+    except BadMagicError:
+        logging.error("Error! %r is not a timestamp file" % filename)
+        raise
+    except DeserializationError as exp:
+        logging.error("Invalid timestamp file %r: %s" % (filename, exp))
+        raise
+
+    changed = upgrade_timestamp(detached_timestamp.timestamp)
+
+    if changed:
+        try:
+            with open(old_stamp_fd.name, 'wb') as new_stamp_fd:
+                ctx = StreamSerializationContext(new_stamp_fd)
+                detached_timestamp.serialize(ctx)
+        except IOError as exp:
+            logging.error("Could not upgrade timestamp %s: %s" % (old_stamp_fd.name, exp))
+            raise
+
+    if is_timestamp_complete(detached_timestamp.timestamp):
+        logging.info("Success! Timestamp complete")
+        return (0, 'UPGRADED')
+
+    logging.warning("Failed! Timestamp not complete")
+    return (None, None)
+
+
+
 if __name__ == '__main__':
 
     logging.basicConfig(level=logging.DEBUG)
     #ots_stamp(sys.argv[1:], min_resp=DEF_MIN_RESP, timeout=DEF_TIMEOUT)
-    ots_stamp(sys.argv[1:])
+    ots_upgrade(sys.argv[1])
