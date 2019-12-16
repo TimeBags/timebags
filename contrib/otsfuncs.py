@@ -9,6 +9,8 @@
 # modified, propagated, or distributed except according to the terms contained
 # in the LICENSE file.
 
+''' module derived from OpenTimestamps Client but usable as a python library '''
+
 import sys
 
 import logging
@@ -17,41 +19,47 @@ import time
 import threading
 from queue import Queue, Empty
 
-from opentimestamps.core.timestamp import DetachedTimestampFile, make_merkle_tree, OpAppend, OpSHA256, Timestamp
+from opentimestamps.core.timestamp import DetachedTimestampFile, make_merkle_tree
+from opentimestamps.core.timestamp import OpAppend, OpSHA256, Timestamp
 from opentimestamps.core.serialize import StreamSerializationContext
 
 import opentimestamps.calendar
 
 import otsclient
 
+
+DEF_MIN_RESP = 2
+DEF_TIMEOUT = 10
+
+
 def remote_calendar(calendar_uri):
     """Create a remote calendar with User-Agent set appropriately"""
     return opentimestamps.calendar.RemoteCalendar(calendar_uri,
-                                                  user_agent="OpenTimestamps-Client/%s" % otsclient.__version__)
+                                                  user_agent="OpenTimestamps-Client/%s"
+                                                  % otsclient.__version__)
 
 
-def create_timestamp(timestamp, calendar_urls):
+def create_timestamp(timestamp, calendar_urls, min_resp, timeout):
     """Create a timestamp
 
     calendar_urls - List of calendar's to use
     """
 
 
-    m = 2
-    n = len(calendar_urls)
-    timeout = 10
-    logging.debug("Doing %d-of-%d request, timeout %d sec." % (m, n, timeout))
+    n_cals = len(calendar_urls)
+    msg = "Doing %d-of-%d request, timeout %d sec." % (min_resp, n_cals, timeout)
+    logging.debug(msg)
 
-    q = Queue()
+    q_cals = Queue()
     for calendar_url in calendar_urls:
-        submit_async(calendar_url, timestamp.msg, q, timeout)
+        submit_async(calendar_url, timestamp.msg, q_cals, timeout)
 
     start = time.time()
     merged = 0
-    for i in range(n):
+    for i in range(n_cals): # pylint: disable=W0612
         try:
             remaining = max(0, timeout - (time.time() - start))
-            result = q.get(block=True, timeout=remaining)
+            result = q_cals.get(block=True, timeout=remaining)
             try:
                 if isinstance(result, Timestamp):
                     timestamp.merge(result)
@@ -65,28 +73,39 @@ def create_timestamp(timestamp, calendar_urls):
             # Timeout
             continue
 
-    if merged < m:
-        logging.error("Failed to create timestamp: need at least %d attestation%s but received %s within timeout" % (m, "" if m == 1 else "s", merged))
-        sys.exit(1)
-    logging.debug("%.2f seconds elapsed" % (time.time()-start))
+    if merged < min_resp:
+        msg = "Failed to create timestamp: need at least %d attestation%s " \
+              "but received %s within timeout" \
+              % (min_resp, "" if min_resp == 1 else "s", merged)
+        logging.error(msg)
+        return False
+
+    msg = "%.2f seconds elapsed" % (time.time()-start)
+    logging.debug(msg)
+    return True
 
 
-def submit_async(calendar_url, msg, q, timeout):
+def submit_async(calendar_url, message, q_cals, timeout):
+    ''' async call to calendar '''
 
-    def submit_async_thread(remote, msg, q, timeout):
+    def submit_async_thread(remote, message, q_cals, timeout):
+        ''' async thread '''
+
         try:
-            calendar_timestamp = remote.submit(msg, timeout=timeout)
-            q.put(calendar_timestamp)
+            calendar_timestamp = remote.submit(message, timeout=timeout)
+            q_cals.put(calendar_timestamp)
         except Exception as exc:
-            q.put(exc)
+            q_cals.put(exc)
 
-    logging.info('Submitting to remote calendar %s' % calendar_url)
+    msg = 'Submitting to remote calendar %s' % calendar_url
+    logging.info(msg)
     remote = remote_calendar(calendar_url)
-    t = threading.Thread(target=submit_async_thread, args=(remote, msg, q, timeout))
-    t.start()
+    t_cal = threading.Thread(target=submit_async_thread, args=(remote, message, q_cals, timeout))
+    t_cal.start()
 
 
-def ots_stamp(file_list):
+def ots_stamp(file_list, min_resp=DEF_MIN_RESP, timeout=DEF_TIMEOUT):
+    ''' stamp function '''
 
     merkle_roots = []
     file_timestamps = []
@@ -96,8 +115,9 @@ def ots_stamp(file_list):
             try:
                 file_timestamp = DetachedTimestampFile.from_fd(OpSHA256(), file_handler)
             except OSError as exp:
-                logging.error("Could not read %r: %s" % (file_name, exp))
-                sys.exit(1)
+                msg = "Could not read %r: %s" % (file_name, exp)
+                logging.error(msg)
+                raise
 
         # nonce
         nonce_appended_stamp = file_timestamp.timestamp.ops.add(OpAppend(os.urandom(16)))
@@ -114,7 +134,8 @@ def ots_stamp(file_list):
     calendar_urls.append('https://a.pool.eternitywall.com')
     calendar_urls.append('https://ots.btc.catallaxy.com')
 
-    create_timestamp(merkle_tip, calendar_urls)
+    if not create_timestamp(merkle_tip, calendar_urls, min_resp, timeout):
+        return False
 
     for (file_name, file_timestamp) in zip(file_list, file_timestamps):
         timestamp_file_path = file_name + '.ots'
@@ -123,7 +144,16 @@ def ots_stamp(file_list):
                 ctx = StreamSerializationContext(timestamp_fd)
                 file_timestamp.serialize(ctx)
         except IOError as exp:
-            logging.error("Failed to create timestamp %r: %s" % (timestamp_file_path, exp))
-            sys.exit(1)
+            msg = "Failed to create timestamp %r: %s" % (timestamp_file_path, exp)
+            logging.error(msg)
+            raise
 
-ots_stamp(sys.argv[1:])
+    return True
+
+
+
+if __name__ == '__main__':
+
+    logging.basicConfig(level=logging.DEBUG)
+    #ots_stamp(sys.argv[1:], min_resp=DEF_MIN_RESP, timeout=DEF_TIMEOUT)
+    ots_stamp(sys.argv[1:])
