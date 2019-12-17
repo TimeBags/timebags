@@ -20,7 +20,7 @@ import threading
 from queue import Queue, Empty
 import urllib.request
 
-from bitcoin.core import b2x
+from bitcoin.core import b2x, b2lx
 from opentimestamps.bitcoin import BitcoinBlockHeaderAttestation
 from opentimestamps.core.notary import PendingAttestation
 from opentimestamps.core.timestamp import DetachedTimestampFile, make_merkle_tree
@@ -159,7 +159,6 @@ def ots_stamp(file_list, min_resp=DEF_MIN_RESP, timeout=DEF_TIMEOUT):
 def is_timestamp_complete(stamp):
     """Determine if timestamp is complete and can be verified"""
 
-    #for msg, attestation in stamp.all_attestations():
     for _, attestation in stamp.all_attestations():
         if attestation.__class__ == BitcoinBlockHeaderAttestation:
             # FIXME: we should actually check this attestation, rather than
@@ -168,6 +167,20 @@ def is_timestamp_complete(stamp):
 
     return False
 
+
+
+def get_attestations_list(stamp):
+    """Determine if timestamp is complete and can be verified"""
+
+    att_list = []
+    for msg, attestation in stamp.all_attestations():
+        if attestation.__class__ == BitcoinBlockHeaderAttestation:
+            # FIXME: we should actually check this attestation, rather than
+            # assuming it's valid
+            ret = (int(attestation.height), b2lx(msg))
+            att_list.append(ret)
+
+    return att_list
 
 
 
@@ -195,31 +208,6 @@ def upgrade_timestamp(timestamp):
 
     changed = False
     existing_attestations = get_attestations(timestamp)
-    '''
-    # First, check the cache for upgrades to this timestamp. Since the cache is
-    # local, we do this very agressively, checking every single sub-timestamp
-    # against the cache.
-    def walk_stamp(stamp):
-        yield stamp
-        for sub_stamp in stamp.ops.values():
-            yield from walk_stamp(sub_stamp)
-
-    existing_attestations = get_attestations(timestamp)
-    for sub_stamp in walk_stamp(timestamp):
-        try:
-            cached_stamp = args.cache[sub_stamp.msg]
-        except KeyError:
-            continue
-        sub_stamp.merge(cached_stamp)
-
-    new_attestations_from_cache = get_attestations(timestamp).difference(existing_attestations)
-    if len(new_attestations_from_cache):
-        changed = True
-        logging.info("Got %d attestation(s) from cache" % len(new_attestations_from_cache))
-        existing_attestations.update(new_attestations_from_cache)
-        for new_att in new_attestations_from_cache:
-            logging.debug("    %r" % new_att)
-    '''
     if not is_timestamp_complete(timestamp):
         # Check remote calendars for upgrades.
         #
@@ -228,20 +216,6 @@ def upgrade_timestamp(timestamp):
         for sub_stamp in directly_verified(timestamp):
             for attestation in sub_stamp.attestations:
                 if attestation.__class__ == PendingAttestation:
-                    #calendar_urls = args.calendar_urls
-                    '''
-                    if calendar_urls:
-                        # FIXME: this message is incorrectly displayed, disabling for now.
-                        #
-                        # logging.debug("Attestation URI %s overridden by user-specified remote calendar(s)" % attestation.uri)
-                        pass
-                    else:
-                        if attestation.uri in args.whitelist:
-                            calendar_urls = [attestation.uri]
-                        else:
-                            logging.warning("Ignoring attestation from calendar %s: Calendar not in whitelist" % attestation.uri)
-                            continue
-                    '''
                     commitment = sub_stamp.msg
                     #for calendar_url in calendar_urls:
                     for calendar_url in [attestation.uri]:
@@ -312,7 +286,7 @@ def ots_upgrade(filename):
 
     if is_timestamp_complete(detached_timestamp.timestamp):
         logging.info("Success! Timestamp complete")
-        return (0, 'UPGRADED')
+        return ('UPGRADED', get_attestations_list(detached_timestamp.timestamp))
 
     logging.warning("Failed! Timestamp not complete")
     return (None, None)

@@ -19,6 +19,7 @@ import sys
 import logging
 import os
 import ctypes
+from pprint import pprint
 
 import gui
 import cli
@@ -54,10 +55,10 @@ def main():
     elif len(sys.argv) > 1:
         ret = cli.main(sys.argv[1:])
     if ret is not None:
-        print(ret['result'])
+        pprint(ret)
         return 0
     print("ERROR: check log for details")
-    print(repr(ret))
+    pprint(ret)
     return 1
 
 

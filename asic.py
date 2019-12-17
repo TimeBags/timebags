@@ -296,9 +296,9 @@ class ASiCS():
 
         # upgrade data ots
         shutil.move(data_ots_pf, data_ots_tmp)
-        height, merkle_root =  ots.ots_upgrade(data_ots_tmp)
-        if height is not None:
-            self.status['dat-ots'] = (height, str(merkle_root))
+        res, att = ots.ots_upgrade(data_ots_tmp)
+        if res == 'UPGRADED':
+            self.status['dat-ots'] = (res, att)
             msg = "Upgraded ots of dataobject"
             logging.debug(msg)
         else:
@@ -308,9 +308,9 @@ class ASiCS():
 
 
         # upgrade tst ots
-        height, merkle_root =  ots.ots_upgrade(tst_ots_pf)
-        if height is not None:
-            self.status['tst-ots'] = (height, str(merkle_root))
+        res, att = ots.ots_upgrade(tst_ots_pf)
+        if res == 'UPGRADED':
+            self.status['tst-ots'] = (res, att)
             msg = "Upgraded ots of timestamp"
             logging.debug(msg)
         else:
@@ -336,13 +336,11 @@ class ASiCS():
                 self.status['result'] = 'PENDING'
                 logging.info('ASIC-S completed and pending')
 
-        elif self.status['result'] == 'PENDING':
-            dat_bh, dat_mr = self.status['dat-ots']
-            tst_bh, tst_mr = self.status['tst-ots']
-            if isinstance(dat_bh, int) and isinstance(dat_mr, str) \
-                and isinstance(tst_bh, int) and isinstance(tst_mr, str):
-                self.status['result'] = 'UPGRADED'
-                logging.info('ASIC-S completed and upgraded')
+        elif self.status['result'] == 'PENDING' \
+                and self.status['dat-ots'][0] == 'UPGRADED' \
+                and self.status['tst-ots'][0] == 'UPGRADED':
+            self.status['result'] = 'UPGRADED'
+            logging.info('ASIC-S completed and upgraded')
 
 
 
