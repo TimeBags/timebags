@@ -301,6 +301,7 @@ class ASiCS():
             self.status['dat-ots'] = (res, att)
             msg = "Upgraded ots of dataobject"
             logging.debug(msg)
+        # TODO: elif res == 'CORRUPTED':
         else:
             msg = "Failed ots of dataobject"
             logging.critical(msg)
@@ -313,6 +314,7 @@ class ASiCS():
             self.status['tst-ots'] = (res, att)
             msg = "Upgraded ots of timestamp"
             logging.debug(msg)
+        # TODO: elif res == 'CORRUPTED':
         else:
             msg = "Failed ots of timestamp"
             logging.critical(msg)
@@ -323,10 +325,16 @@ class ASiCS():
         ''' Check for timestamps status'''
 
 
+        tst_pf = os.path.join(tmpdir, TIMESTAMP)
+        data_ots_pf = os.path.join(tmpdir, "META-INF", self.dataobject + ".ots")
+        tst_ots_pf = os.path.join(tmpdir, TIMESTAMP + ".ots")
+
+        if os.path.exists(tst_pf):
+            # TODO: if tst status is None, then get_tst_info() and set status
+            pass
+
+
         if self.status['result'] in ('UNKNOWN', 'INCOMPLETE'):
-            tst_pf = os.path.join(tmpdir, TIMESTAMP)
-            data_ots_pf = os.path.join(tmpdir, "META-INF", self.dataobject + ".ots")
-            tst_ots_pf = os.path.join(tmpdir, TIMESTAMP + ".ots")
 
             if not os.path.exists(tst_pf) or not os.path.exists(data_ots_pf) \
                 or not os.path.exists(tst_ots_pf):
@@ -336,12 +344,18 @@ class ASiCS():
                 self.status['result'] = 'PENDING'
                 logging.info('ASIC-S completed and pending')
 
+
         elif self.status['result'] == 'PENDING' \
                 and self.status['dat-ots'][0] == 'UPGRADED' \
                 and self.status['tst-ots'][0] == 'UPGRADED':
+                # TODO: check if ots corrupted also here
             self.status['result'] = 'UPGRADED'
             logging.info('ASIC-S completed and upgraded')
 
+
+        elif self.status['result'] == 'UPGRADED':
+            # TODO: check for ots verified/corrupted
+            pass
 
 
     def process_timestamps(self):
