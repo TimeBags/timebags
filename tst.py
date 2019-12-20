@@ -95,7 +95,15 @@ def get_token(data):
     logging.critical(msg)
     return None
 
-# def verify_token(data):
-# verify calling remote timestamper?
+
+def get_info(tst):
+    ''' Fetch timestamp from token '''
+
+    # TODO: extract tsa-url from token using asn1 lib
+    url = None
+    return (get_timestamp(tst), url)
+
+#def verify_token(tst, data):
+#    ''' verify calling remote timestamper? '''
 #
-# timestamper.check(tst, data)
+#    timestamper.check(tst, data)

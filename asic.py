@@ -146,7 +146,7 @@ class ASiCS():
         # result  = UNKNOWN | INCOMPLETE | PENDING | UPGRADED
         # FIXME: when ots are not upgradable in no way, will be also a CORRUPTED result
         # asic-s  = description string to explain many cases of not valid asic-s
-        # dat-tst = (<url>, <date_time>)
+        # dat-tst = (<date_time>, <tsa-url>)
         # *-ots   = ('PENDING', None) | (<block height>, '<merkle-root>')
         self.status = {'result': 'UNKNOWN', 'asic-s': None, 'dat-tst': (None, None),
                        'dat-ots': (None, None), 'tst-ots': (None, None)}
@@ -248,7 +248,7 @@ class ASiCS():
                     token, date_time, url = ret
                     with open(tst_pf, mode='xb') as tst_fd:
                         tst_fd.write(token)
-                    self.status['dat-tst'] = (url, date_time)
+                    self.status['dat-tst'] = (date_time, url)
                 else:
                     msg = "timestamping failed"
                     logging.critical(msg)
@@ -330,8 +330,9 @@ class ASiCS():
         tst_ots_pf = os.path.join(tmpdir, TIMESTAMP + ".ots")
 
         if os.path.exists(tst_pf):
-            # TODO: if tst status is None, then get_tst_info() and set status
-            pass
+
+            with open(tst_pf, mode='rb') as tst_fd:
+                self.status['dat-tst'] = tst.get_info(tst_fd.read())
 
 
         if self.status['result'] in ('UNKNOWN', 'INCOMPLETE'):
