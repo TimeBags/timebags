@@ -25,14 +25,17 @@ curl -o cacert.pem https://freetsa.org/files/cacert.pem
 openssl ts -reply -in timestamp.tst -token_in -text
 
 openssl ts -verify -in timestamp.tst -data data.txt -CAfile cacert.pem -untrusted tsa.crt
+
+openssl ts -verify -data Readme.md -in timestamp.tst -CAfile freetsa.pem -partial_chain -token_in
 '''
 
 import os
 import inspect
 from struct import unpack
 import logging
-from rfc3161ng import RemoteTimestamper, get_timestamp
+from rfc3161ng import RemoteTimestamper, get_timestamp, check_timestamp
 from cryptography.exceptions import InvalidSignature
+
 
 def get_token(data):
     ''' Call a Remote TimeStamper to obtain a ts token of data '''
@@ -103,7 +106,18 @@ def get_info(tst):
     url = None
     return (get_timestamp(tst), url)
 
-#def verify_token(tst, data):
-#    ''' verify calling remote timestamper? '''
-#
-#    timestamper.check(tst, data)
+
+def verify_tst(tst_pf, dat_pf, tsa_pf):
+
+    with open(tsa_pf, mode='rb') as tsa_fd:
+        tsa = tsa_fd.read()
+
+    with open(dat_pf, mode='rb') as dat_fd:
+        dat = dat_fd.read()
+
+    with open(tst_pf, mode='rb') as tst_fd:
+        tst = tst_fd.read()
+
+    # FIXME: hashname must be read from tst
+    hashname='sha256'
+    return check_timestamp(tst, data=dat, certificate=tsa, hashname=hashname)
