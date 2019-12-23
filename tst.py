@@ -46,15 +46,15 @@ def get_token(data):
 
     # TBD: read the list from a config file and append cli params
     tsa_list = [{
-        'url' : "http://timestamp.comodoca.com/rfc3161",
-        'tsacrt' : "freetsa.crt",
-        'cacrt' : None,
-        'username' : None,
-        'password' : None,
-        'timeout' : 10,
-        'hashname' : 'sha256',
-        'include_tsa_cert' : False
-    }, {
+#        'url' : "http://timestamp.comodoca.com/rfc3161",
+#        'tsacrt' : "freetsa.crt",
+#        'cacrt' : None,
+#        'username' : None,
+#        'password' : None,
+#        'timeout' : 10,
+#        'hashname' : 'sha256',
+#        'include_tsa_cert' : False
+#    }, {
         'url' : "https://freetsa.org/tsr",
         'tsacrt' : "freetsa.crt",
         'cacrt' : None,
@@ -125,11 +125,20 @@ def verify_tst(tst_pf, dat_pf):
 
     hash_oid = str(tst.tst_info.message_imprint.hash_algorithm[0])
     hashname = HASH[hash_oid].name
-    msg = "Verify tst <%s> and dat <%s> hash <%s>" % (tst_pf, dat_pf, hashname)
+    msg = "Verify tst <%s> and dat <%s> hash <%s> commonName <%s>" \
+            % (tst_pf, dat_pf, hashname, get_tsa_common_name(tst))
     logging.debug(msg)
+
+    # FIXME: why geting crt from tst does not work?
+    # crt = load_certificate(tst.content, b'')
+    app_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+    crt_pf = os.path.join(app_dir, "freetsa.crt")
+    with open(crt_pf, mode='rb') as crt_fd:
+        crt = crt_fd.read()
+
     ret = False
     try:
-        ret = check_timestamp(tst, data=dat, certificate=b'', hashname=hashname)
+        ret = check_timestamp(tst, data=dat, certificate=crt, hashname=hashname)
     except ValueError as err:
         msg = "ValueError: %s" % str(err)
         logging.critical(msg)
