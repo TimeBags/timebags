@@ -146,7 +146,7 @@ class ASiCS():
         # result  = UNKNOWN | INCOMPLETE | PENDING | UPGRADED
         # FIXME: when ots are not upgradable in no way, will be also a CORRUPTED result
         # asic-s  = description string to explain many cases of not valid asic-s
-        # dat-tst = (<date_time>, <tsa-url>)
+        # dat-tst = (<date_time>, <tsa-info>)
         # *-ots   = ('PENDING', None) | (<block height>, '<merkle-root>')
         self.status = {'result': 'UNKNOWN', 'asic-s': None, 'dat-tst': (None, None),
                        'dat-ots': (None, None), 'tst-ots': (None, None)}
@@ -245,10 +245,10 @@ class ASiCS():
 
                 ret = tst.get_token(data)
                 if ret is not None:
-                    token, date_time, url = ret
+                    token, date_time, info = ret
                     with open(tst_pf, mode='xb') as tst_fd:
                         tst_fd.write(token)
-                    self.status['dat-tst'] = (date_time, url)
+                    self.status['dat-tst'] = (date_time, info)
                 else:
                     msg = "timestamping failed"
                     logging.critical(msg)
@@ -325,14 +325,22 @@ class ASiCS():
         ''' Check for timestamps status'''
 
 
+        data_pf = os.path.join(tmpdir, self.dataobject)
         tst_pf = os.path.join(tmpdir, TIMESTAMP)
         data_ots_pf = os.path.join(tmpdir, "META-INF", self.dataobject + ".ots")
         tst_ots_pf = os.path.join(tmpdir, TIMESTAMP + ".ots")
 
+
         if os.path.exists(tst_pf):
 
-            with open(tst_pf, mode='rb') as tst_fd:
-                self.status['dat-tst'] = tst.get_info(tst_fd.read())
+            if tst.verify_tst(tst_pf, data_pf):
+                with open(tst_pf, mode='rb') as tst_fd:
+                    self.status['dat-tst'] = tst.get_info(tst_fd.read())
+            else:
+                self.status['result'] = 'CORRUPTED'
+                msg = "Error: timestamp.tst file not valid!"
+                logging.critical(msg)
+                return
 
 
         if self.status['result'] in ('UNKNOWN', 'INCOMPLETE'):

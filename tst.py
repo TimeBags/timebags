@@ -33,8 +33,12 @@ import os
 import inspect
 from struct import unpack
 import logging
-from rfc3161ng import RemoteTimestamper, get_timestamp, check_timestamp
+from rfc3161ng import RemoteTimestamper, get_timestamp, check_timestamp, TimeStampToken
+from rfc3161ng.api import load_certificate
 from cryptography.exceptions import InvalidSignature
+from cryptography import x509
+from cryptography.x509.ocsp import _OIDS_TO_HASH as HASH
+from pyasn1.codec.der import decoder
 
 
 def get_token(data):
@@ -100,17 +104,13 @@ def get_token(data):
 
 
 def get_info(tst):
-    ''' Fetch timestamp from token '''
+    ''' Fetch timestamp and TSA info from token '''
 
-    # TODO: extract tsa-url from token using asn1 lib
-    url = None
-    return (get_timestamp(tst), url)
+    return (get_timestamp(tst), get_tsa_common_name(tst))
 
 
-def verify_tst(tst_pf, dat_pf, tsa_pf):
-
-    with open(tsa_pf, mode='rb') as tsa_fd:
-        tsa = tsa_fd.read()
+def verify_tst(tst_pf, dat_pf):
+    ''' Verify timestamp token '''
 
     with open(dat_pf, mode='rb') as dat_fd:
         dat = dat_fd.read()
@@ -118,6 +118,40 @@ def verify_tst(tst_pf, dat_pf, tsa_pf):
     with open(tst_pf, mode='rb') as tst_fd:
         tst = tst_fd.read()
 
-    # FIXME: hashname must be read from tst
-    hashname='sha256'
-    return check_timestamp(tst, data=dat, certificate=tsa, hashname=hashname)
+    if not isinstance(tst, TimeStampToken):
+        tst, substrate = decoder.decode(tst, asn1Spec=TimeStampToken())
+        if substrate:
+            raise ValueError("extra data after tst")
+
+    hash_oid = str(tst.tst_info.message_imprint.hash_algorithm[0])
+    hashname = HASH[hash_oid].name
+    msg = "Verify tst <%s> and dat <%s> hash <%s>" % (tst_pf, dat_pf, hashname)
+    logging.debug(msg)
+    ret = False
+    try:
+        ret = check_timestamp(tst, data=dat, certificate=b'', hashname=hashname)
+    except ValueError as err:
+        msg = "ValueError: %s" % str(err)
+        logging.critical(msg)
+    except InvalidSignature:
+        msg = "InvalidSignature"
+        logging.critical(msg)
+    return ret
+
+
+def get_tsa_common_name(tst):
+    ''' Get the TSA commonName from tst embedded certificate '''
+
+    if not isinstance(tst, TimeStampToken):
+        tst, substrate = decoder.decode(tst, asn1Spec=TimeStampToken())
+        if substrate:
+            raise ValueError("extra data after tst")
+    signed_data = tst.content
+    cert = load_certificate(signed_data, b'')
+
+    for rdns in cert.subject.rdns:
+        for attr in rdns._attributes: # pylint: disable=W0212
+            if attr.oid._name == "commonName": # pylint: disable=W0212
+                return attr.value
+
+    return None
