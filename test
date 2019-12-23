@@ -207,6 +207,26 @@ class TestAsic(unittest.TestCase):
                     self.assertTrue(ret == 'PENDING')
 
 
+    def test_asics_corrupted(self):
+        ''' Test asic-s corrupted files '''
+
+        logging.info("##### Testing asic-s corrupted files asics_corrupted_*.zip")
+        for filename in sorted(glob(os.path.join("tests", "asics", "asics_corrupted_*.zip"))):
+            container = asic.ASiCS(filename)
+            msg = "##### Testing file(%s) corrupted(%s) status(%s)" % \
+                    (filename, str(container.valid), container.status['asic-s'])
+            logging.info(msg)
+            self.assertTrue(container.valid)
+            with tempfile.TemporaryDirectory() as tmpdir:
+                filename_copy = os.path.join(tmpdir, os.path.basename(filename))
+                shutil.copyfile(filename, filename_copy)
+                container = asic.ASiCS(filename_copy)
+                msg = "to be verifyed file: %s" % filename_copy
+                logging.info(msg)
+                ret = container.process_timestamps()
+                self.assertTrue(ret == 'CORRUPTED')
+
+
 
 
 if __name__ == '__main__':
