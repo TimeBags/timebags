@@ -36,67 +36,51 @@ import logging
 from rfc3161ng import RemoteTimestamper, get_timestamp, check_timestamp, TimeStampToken
 from rfc3161ng.api import load_certificate
 from cryptography.exceptions import InvalidSignature
-from cryptography import x509
 from cryptography.x509.ocsp import _OIDS_TO_HASH as HASH
 from pyasn1.codec.der import decoder
+import yaml
 
+import settings
 
 def get_token(data):
     ''' Call a Remote TimeStamper to obtain a ts token of data '''
 
-    # TBD: read the list from a config file and append cli params
-    tsa_list = [{
-#        'url' : "http://timestamp.comodoca.com/rfc3161",
-#        'tsacrt' : "freetsa.crt",
-#        'cacrt' : None,
-#        'username' : None,
-#        'password' : None,
-#        'timeout' : 10,
-#        'hashname' : 'sha256',
-#        'include_tsa_cert' : False
-#    }, {
-        'url' : "https://freetsa.org/tsr",
-        'tsacrt' : "freetsa.crt",
-        'cacrt' : None,
-        'username' : None,
-        'password' : None,
-        'timeout' : 10,
-        'hashname' : 'sha256',
-        'include_tsa_cert' : True
-    }]
     tst = None
+    tsa_url = None
+    with open(os.path.join(settings.path_tsa_dir, settings.tsa_yaml)) as tsa_list_fh:
+        tsa_list = yaml.load(tsa_list_fh, Loader=yaml.FullLoader)
 
-    app_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-    for tsa in tsa_list:
-        if not os.path.isfile(tsa['tsacrt']):
-            msg = "TSA cert file missing for %s" % tsa['url']
-            logging.info(msg)
-            continue
-        tsa_pathfile = os.path.join(app_dir, tsa['tsacrt'])
-        with open(tsa_pathfile, 'rb') as tsa_fh:
-            certificate = tsa_fh.read()
-        timestamper = RemoteTimestamper(tsa['url'], certificate=certificate, cafile=tsa['cacrt'],
-                                        hashname=tsa['hashname'], timeout=tsa['timeout'],
-                                        username=tsa['username'], password=tsa['password'],
-                                        include_tsa_certificate=tsa['include_tsa_cert'])
-        nonce = unpack('<q', os.urandom(8))[0]
+        for tsa in tsa_list:
+            tsa_pathfile = os.path.join(settings.path_tsa_dir, tsa['tsacrt'])
+            if not os.path.isfile(tsa_pathfile):
+                msg = "TSA cert file missing for %s" % tsa['url']
+                logging.info(msg)
+                continue
+            with open(tsa_pathfile, 'rb') as tsa_fh:
+                certificate = tsa_fh.read()
+            timestamper = RemoteTimestamper(tsa['url'], certificate=certificate, cafile=tsa['cacrt'],
+                                            hashname=tsa['hashname'], timeout=tsa['timeout'],
+                                            username=tsa['username'], password=tsa['password'],
+                                            include_tsa_certificate=tsa['include_tsa_cert'])
+            nonce = unpack('<q', os.urandom(8))[0]
 
-        msg = "try using TSA endpoint %s to timestamp data" % tsa['url']
-        logging.debug(msg)
-        try:
-            tst = timestamper.timestamp(data=data, nonce=nonce)
-        except RuntimeError as err:
-            logging.debug(err)
-        except InvalidSignature:
-            msg = "Invalid signature in timestamp from %s" % tsa['url']
-            logging.info(msg)
-        else:
-            break
+            msg = "try using TSA endpoint %s to timestamp data" % tsa['url']
+            logging.debug(msg)
+            try:
+                tst = timestamper.timestamp(data=data, nonce=nonce)
+            except RuntimeError as err:
+                logging.debug(err)
+            except InvalidSignature:
+                msg = "Invalid signature in timestamp from %s" % tsa['url']
+                logging.info(msg)
+            else:
+                tsa_url = tsa['url']
+                break
 
     if tst is not None:
-        msg = "TSA %s timestamped dataobject at: %s" % (tsa['url'], get_timestamp(tst))
+        msg = "TSA %s timestamped dataobject at: %s" % (tsa_url, get_timestamp(tst))
         logging.info(msg)
-        return (tst, get_timestamp(tst), tsa['url'])
+        return (tst, get_timestamp(tst), tsa_url)
 
     msg = "none of the TSA provided a timestamp"
     logging.critical(msg)
@@ -132,7 +116,7 @@ def verify_tst(tst_pf, dat_pf):
     # FIXME: why geting crt from tst does not work?
     # crt = load_certificate(tst.content, b'')
     app_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-    crt_pf = os.path.join(app_dir, "freetsa.crt")
+    crt_pf = os.path.join(app_dir, settings.freetsa_pem)
     with open(crt_pf, mode='rb') as crt_fd:
         crt = crt_fd.read()
 

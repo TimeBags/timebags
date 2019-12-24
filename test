@@ -22,6 +22,7 @@ import unittest
 import shutil
 import logging
 
+import settings
 import asic
 import cli
 
@@ -231,6 +232,7 @@ class TestAsic(unittest.TestCase):
 
 if __name__ == '__main__':
 
+    settings.init()
     #logfile = os.path.join("tests","test.log")
     #logging.basicConfig(filename=logfile, filemode='w', level=logging.DEBUG)
     logging.basicConfig(level=logging.DEBUG)

@@ -1,0 +1,19 @@
+- # Free TSA
+    url: https://freetsa.org/tsr
+    tsacrt: freetsa.pem
+    cacrt: null
+    username: null
+    password: null
+    timeout: 10
+    hashname: sha256
+    include_tsa_cert: true
+
+#- # Comodo TSA
+    # url: http://timestamp.comodoca.com/rfc3161
+    # tsacrt: comodotsa.pem
+    # cacrt: null
+    # username: null
+    # password: null
+    # timeout: 10
+    # hashname: sha256
+    # include_tsa_cert: false
