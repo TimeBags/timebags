@@ -143,8 +143,7 @@ class ASiCS():
         self.valid = False
         self.dataobject = None
         self.mimetype = ""
-        # result  = UNKNOWN | INCOMPLETE | PENDING | UPGRADED
-        # FIXME: when ots are not upgradable in no way, will be also a CORRUPTED result
+        # result  = UNKNOWN | INCOMPLETE | PENDING | UPGRADED | CORRUPTED
         # asic-s  = description string to explain many cases of not valid asic-s
         # dat-tst = (<date_time>, <tsa-info>)
         # *-ots   = ('PENDING', None) | (<block height>, '<merkle-root>')
@@ -331,8 +330,14 @@ class ASiCS():
         tst_ots_pf = os.path.join(tmpdir, TIMESTAMP + ".ots")
 
 
-        if os.path.exists(tst_pf):
 
+        if not os.path.exists(tst_pf):
+
+                self.status['result'] = 'INCOMPLETE'
+                logging.info('ASIC-S not completed')
+                return
+
+        else:
             if tst.verify_tst(tst_pf, data_pf):
                 with open(tst_pf, mode='rb') as tst_fd:
                     self.status['dat-tst'] = tst.get_info(tst_fd.read())
@@ -343,28 +348,24 @@ class ASiCS():
                 return
 
 
-        if self.status['result'] in ('UNKNOWN', 'INCOMPLETE'):
 
-            if not os.path.exists(tst_pf) or not os.path.exists(data_ots_pf) \
-                or not os.path.exists(tst_ots_pf):
-                self.status['result'] = 'INCOMPLETE'
-                logging.info('ASIC-S not completed')
+        if not os.path.exists(data_ots_pf) or not os.path.exists(tst_ots_pf):
+            self.status['result'] = 'INCOMPLETE'
+            logging.info('ASIC-S not completed')
+
+        elif self.status['dat-ots'][0] != 'UPGRADED' or self.status['tst-ots'][0] != 'UPGRADED':
+            self.status['result'] = 'PENDING'
+            logging.info('ASIC-S completed and pending')
+
+        else:
+            if True: # TODO: ots.check_integrity()
+                self.status['result'] = 'UPGRADED'
+                logging.info('ASIC-S completed and upgraded')
             else:
-                self.status['result'] = 'PENDING'
-                logging.info('ASIC-S completed and pending')
+                self.status['result'] = 'CORRUPTED'
+                msg = "Error: ots file not valid!"
+                logging.critical(msg)
 
-
-        elif self.status['result'] == 'PENDING' \
-                and self.status['dat-ots'][0] == 'UPGRADED' \
-                and self.status['tst-ots'][0] == 'UPGRADED':
-                # TODO: check if ots corrupted also here
-            self.status['result'] = 'UPGRADED'
-            logging.info('ASIC-S completed and upgraded')
-
-
-        elif self.status['result'] == 'UPGRADED':
-            # TODO: check for ots verified/corrupted
-            pass
 
 
     def process_timestamps(self):
