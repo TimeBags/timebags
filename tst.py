@@ -59,10 +59,10 @@ def get_token(data):
             with open(tsa_pathfile, 'rb') as tsa_fh:
                 certificate = tsa_fh.read()
             timestamper = RemoteTimestamper(tsa['url'],
-                                    certificate=certificate, cafile=tsa['cacrt'],
-                                    hashname=tsa['hashname'], timeout=tsa['timeout'],
-                                    username=tsa['username'], password=tsa['password'],
-                                    include_tsa_certificate=tsa['include_tsa_cert'])
+                                            certificate=certificate, cafile=tsa['cacrt'],
+                                            hashname=tsa['hashname'], timeout=tsa['timeout'],
+                                            username=tsa['username'], password=tsa['password'],
+                                            include_tsa_certificate=tsa['include_tsa_cert'])
             nonce = unpack('<q', os.urandom(8))[0]
 
             msg = "try using TSA endpoint %s to timestamp data" % tsa['url']
@@ -115,8 +115,7 @@ def verify_tst(tst_pf, dat_pf):
         if substrate:
             raise ValueError("extra data after tst")
 
-    hash_oid = str(tst.tst_info.message_imprint.hash_algorithm[0])
-    hashname = HASH[hash_oid].name
+    hashname = HASH[str(tst.tst_info.message_imprint.hash_algorithm[0])].name
     msg = "Verify tst <%s> and dat <%s> hash <%s> commonName <%s>" \
             % (tst_pf, dat_pf, hashname, get_tsa_common_name(tst))
     logging.debug(msg)
@@ -124,8 +123,7 @@ def verify_tst(tst_pf, dat_pf):
     # FIXME: why geting crt from tst does not work?
     # crt = load_certificate(tst.content, b'')
     app_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-    crt_pf = os.path.join(app_dir, settings.freetsa_pem)
-    with open(crt_pf, mode='rb') as crt_fd:
+    with open(os.path.join(app_dir, settings.freetsa_pem), mode='rb') as crt_fd:
         crt = crt_fd.read()
 
     ret = False
