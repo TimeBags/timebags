@@ -207,7 +207,7 @@ def upgrade_timestamp(timestamp):
 
 
     changed = False
-    existing_attestations = get_attestations(timestamp)
+    existing_atts = get_attestations(timestamp)
     if not is_timestamp_complete(timestamp):
         # Check remote calendars for upgrades.
         #
@@ -219,28 +219,34 @@ def upgrade_timestamp(timestamp):
                     commitment = sub_stamp.msg
                     #for calendar_url in calendar_urls:
                     for calendar_url in [attestation.uri]:
-                        logging.debug("Checking calendar %s for %s" % (attestation.uri, b2x(commitment)))
+                        msg = "Checking calendar %s for %s" % (attestation.uri, b2x(commitment))
+                        logging.debug(msg)
                         calendar = remote_calendar(calendar_url)
 
                         try:
                             upgraded_stamp = calendar.get_timestamp(commitment)
                         except opentimestamps.calendar.CommitmentNotFoundError as exp:
-                            logging.warning("Calendar %s: %s" % (attestation.uri, exp.reason))
+                            msg = "Calendar %s: %s" % (attestation.uri, exp.reason)
+                            logging.warning(msg)
                             continue
                         except urllib.error.URLError as exp:
-                            logging.warning("Calendar %s: %s" % (attestation.uri, exp.reason))
+                            msg = "Calendar %s: %s" % (attestation.uri, exp.reason)
+                            logging.warning(msg)
                             continue
 
                         atts_from_remote = get_attestations(upgraded_stamp)
                         if atts_from_remote:
-                            logging.info("Got %d attestation(s) from %s" % (len(atts_from_remote), calendar_url))
+                            msg = "Got %d attestation(s) from %s" % \
+                                    (len(atts_from_remote), calendar_url)
+                            logging.info(msg)
                             for att in get_attestations(upgraded_stamp):
-                                logging.debug("    %r" % att)
+                                msg = "    %r" % att
+                                logging.debug(msg)
 
-                        new_attestations = get_attestations(upgraded_stamp).difference(existing_attestations)
-                        if new_attestations:
+                        new_atts = get_attestations(upgraded_stamp).difference(existing_atts)
+                        if new_atts:
                             changed = True
-                            existing_attestations.update(new_attestations)
+                            existing_atts.update(new_atts)
 
                             # FIXME: need to think about DoS attacks here
                             #args.cache.merge(upgraded_stamp)
@@ -258,19 +264,25 @@ def upgrade_timestamp(timestamp):
 def ots_upgrade(filename):
     ''' upgrade function '''
 
-    logging.debug("Upgrading %s" % filename)
+    msg = "Upgrading %s" % filename
+    logging.debug(msg)
 
     try:
         with open(filename, 'rb') as old_stamp_fd:
             ctx = StreamDeserializationContext(old_stamp_fd)
             detached_timestamp = DetachedTimestampFile.deserialize(ctx)
 
-    # IOError's are already handled by argparse
+    except IOError as exp:
+        msg = "Could not read file %s: %s" % (old_stamp_fd.name, exp)
+        logging.error(msg)
+        raise
     except BadMagicError:
-        logging.error("Error! %r is not a timestamp file" % filename)
+        msg = "Error! %r is not a timestamp file" % filename
+        logging.error(msg)
         raise
     except DeserializationError as exp:
-        logging.error("Invalid timestamp file %r: %s" % (filename, exp))
+        msg = "Invalid timestamp file %r: %s" % (filename, exp)
+        logging.error(msg)
         raise
 
     changed = upgrade_timestamp(detached_timestamp.timestamp)
@@ -281,7 +293,8 @@ def ots_upgrade(filename):
                 ctx = StreamSerializationContext(new_stamp_fd)
                 detached_timestamp.serialize(ctx)
         except IOError as exp:
-            logging.error("Could not upgrade timestamp %s: %s" % (old_stamp_fd.name, exp))
+            msg = "Could not upgrade timestamp %s: %s" % (old_stamp_fd.name, exp)
+            logging.error(msg)
             raise
 
     if is_timestamp_complete(detached_timestamp.timestamp):
@@ -289,7 +302,96 @@ def ots_upgrade(filename):
         return ('UPGRADED', get_attestations_list(detached_timestamp.timestamp))
 
     logging.warning("Failed! Timestamp not complete")
-    return (None, None)
+    return ('PENDING', None)
+
+
+
+
+
+
+
+def verify_timestamp(timestamp):
+    ''' verify an ots '''
+
+
+    #args.calendar_urls = []
+    upgrade_timestamp(timestamp)
+
+    def attestation_key(item):
+        (_, attestation) = item
+        if attestation.__class__ == BitcoinBlockHeaderAttestation:
+            return attestation.height
+        return 2**32-1
+
+    good = False
+    results = []
+    for msg, attestation in sorted(timestamp.all_attestations(), key=attestation_key):
+        if attestation.__class__ == PendingAttestation:
+            # Handled by the upgrade_timestamp() call above.
+            pass
+
+        elif attestation.__class__ == BitcoinBlockHeaderAttestation:
+            ret = (attestation.height, b2lx(msg))
+            msg = "To verify check that Bitcoin block %d has merkleroot %s" % ret
+            logging.info(msg)
+            good = True
+            results.append(ret)
+            continue
+
+    return good, results
+
+
+def ots_verify(filename_ots):
+    ''' verify an ots file '''
+
+    try:
+        with open(filename_ots, 'rb') as ots_fd:
+            ctx = StreamDeserializationContext(ots_fd)
+            detached_timestamp = DetachedTimestampFile.deserialize(ctx)
+    except BadMagicError:
+        msg = "Error! %r is not a timestamp file." % filename_ots
+        logging.error(msg)
+        raise
+    except DeserializationError as exp:
+        msg = "Invalid timestamp file %r: %s" % (filename_ots, exp)
+        logging.error(msg)
+        raise
+
+    else:
+        if not filename_ots.endswith('.ots'):
+            logging.error('Timestamp filename does not end in .ots')
+            raise Exception
+
+        target_filename = filename_ots[:-4]
+        msg = "Assuming target filename is %r" % target_filename
+        logging.debug(msg)
+
+        try:
+            target_fd = open(target_filename, 'rb')
+        except IOError as exp:
+            msg = 'Could not open target: %s' % exp
+            logging.error(msg)
+            raise
+
+        msg = "Hashing file, algorithm %s" % detached_timestamp.file_hash_op.TAG_NAME
+        logging.debug(msg)
+        actual_file_digest = detached_timestamp.file_hash_op.hash_fd(target_fd)
+        msg = "Got digest %s" % b2x(actual_file_digest)
+        logging.debug(msg)
+
+        if actual_file_digest != detached_timestamp.file_digest:
+            msg = "Expected digest %s" % b2x(detached_timestamp.file_digest)
+            logging.debug(msg)
+            logging.error("File does not match original!")
+            return ("CORRUPTED", None)
+
+    good, results = verify_timestamp(detached_timestamp.timestamp)
+    if good:
+        return ("UPGRADED", results)
+    return ("PENDING", None)
+
+
+
 
 
 
@@ -297,4 +399,5 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=logging.DEBUG)
     #ots_stamp(sys.argv[1:], min_resp=DEF_MIN_RESP, timeout=DEF_TIMEOUT)
-    ots_upgrade(sys.argv[1])
+    #ots_upgrade(sys.argv[1])
+    ots_verify(sys.argv[1])

@@ -146,7 +146,8 @@ class ASiCS():
         # result  = UNKNOWN | INCOMPLETE | PENDING | UPGRADED | CORRUPTED
         # asic-s  = description string to explain many cases of not valid asic-s
         # dat-tst = (<date_time>, <tsa-info>)
-        # *-ots   = ('PENDING', None) | (<block height>, '<merkle-root>')
+        # *-ots   = ('PENDING|CORRUPTED', None) | ('UPGRADED', [attestation, ...])
+        #            attestation = (<block height>, '<merkle-root>')
         self.status = {'result': 'UNKNOWN', 'asic-s': None, 'dat-tst': (None, None),
                        'dat-ots': (None, None), 'tst-ots': (None, None)}
 
@@ -284,8 +285,8 @@ class ASiCS():
 
 
 
-    def upgrade_ots(self, tmpdir):
-        ''' Upgrade opentimestamps '''
+    def verify_ots(self, tmpdir):
+        ''' Verify opentimestamps '''
 
 
         data_ots_pf = os.path.join(tmpdir, "META-INF", self.dataobject + ".ots")
@@ -293,30 +294,21 @@ class ASiCS():
         tst_ots_pf = os.path.join(tmpdir, TIMESTAMP + ".ots")
 
 
-        # upgrade data ots
+        # verify data ots
         shutil.move(data_ots_pf, data_ots_tmp)
-        res, att = ots.ots_upgrade(data_ots_tmp)
-        if res == 'UPGRADED':
-            self.status['dat-ots'] = (res, att)
-            msg = "Upgraded ots of dataobject"
-            logging.debug(msg)
-        # TODO: elif res == 'CORRUPTED':
-        else:
-            msg = "Failed ots of dataobject"
-            logging.critical(msg)
+        res, att = ots.ots_verify(data_ots_tmp)
+        self.status['dat-ots'] = (res, att)
+        msg = "Verify dat-ots result: %s %s" % (res, att)
+        logging.debug(msg)
         shutil.move(data_ots_tmp, data_ots_pf)
 
 
-        # upgrade tst ots
+        # verify tst ots
         res, att = ots.ots_upgrade(tst_ots_pf)
-        if res == 'UPGRADED':
-            self.status['tst-ots'] = (res, att)
-            msg = "Upgraded ots of timestamp"
-            logging.debug(msg)
-        # TODO: elif res == 'CORRUPTED':
-        else:
-            msg = "Failed ots of timestamp"
-            logging.critical(msg)
+        self.status['tst-ots'] = (res, att)
+        msg = "Verify tst-ots result: %s %s" % (res, att)
+        logging.debug(msg)
+
 
 
 
@@ -333,19 +325,18 @@ class ASiCS():
 
         if not os.path.exists(tst_pf):
 
-                self.status['result'] = 'INCOMPLETE'
-                logging.info('ASIC-S not completed')
-                return
+            self.status['result'] = 'INCOMPLETE'
+            logging.info('ASIC-S not completed')
+            return
 
+        if tst.verify_tst(tst_pf, data_pf):
+            with open(tst_pf, mode='rb') as tst_fd:
+                self.status['dat-tst'] = tst.get_info(tst_fd.read())
         else:
-            if tst.verify_tst(tst_pf, data_pf):
-                with open(tst_pf, mode='rb') as tst_fd:
-                    self.status['dat-tst'] = tst.get_info(tst_fd.read())
-            else:
-                self.status['result'] = 'CORRUPTED'
-                msg = "Error: timestamp.tst file not valid!"
-                logging.critical(msg)
-                return
+            self.status['result'] = 'CORRUPTED'
+            msg = "Error: timestamp.tst file not valid!"
+            logging.critical(msg)
+            return
 
 
 
@@ -353,18 +344,23 @@ class ASiCS():
             self.status['result'] = 'INCOMPLETE'
             logging.info('ASIC-S not completed')
 
-        elif self.status['dat-ots'][0] != 'UPGRADED' or self.status['tst-ots'][0] != 'UPGRADED':
+        elif self.status['dat-ots'][0] == 'PENDING' or self.status['tst-ots'][0] == 'PENDING':
             self.status['result'] = 'PENDING'
             logging.info('ASIC-S completed and pending')
 
+        elif self.status['dat-ots'][0] == 'CORRUPTED' or self.status['tst-ots'][0] == 'CORRUPTED':
+            self.status['result'] = 'CORRUPTED'
+            logging.critical('ASIC-S corrupted')
+
+        elif self.status['dat-ots'][0] == 'UPGRADED' and self.status['tst-ots'][0] == 'UPGRADED':
+            self.status['result'] = 'UPGRADED'
+            logging.info('ASIC-S completed and upgraded')
+
         else:
-            if True: # TODO: ots.check_integrity()
-                self.status['result'] = 'UPGRADED'
-                logging.info('ASIC-S completed and upgraded')
-            else:
-                self.status['result'] = 'CORRUPTED'
-                msg = "Error: ots file not valid!"
-                logging.critical(msg)
+            self.status['result'] = 'UNKNOWN'
+            msg = "ots status is unknown: %s %s" \
+                    % (self.status['dat-ots'][0], self.status['tst-ots'][0])
+            logging.debug(msg)
 
 
 
@@ -385,20 +381,9 @@ class ASiCS():
                     self.add_timestamps(tmpdir)
                     self.check_timestamps_status(tmpdir)
 
-                # process to upgrade
-                elif self.status['result'] == 'PENDING':
-                    self.upgrade_ots(tmpdir)
-                    self.check_timestamps_status(tmpdir)
-
-                # process to verify
-                elif self.status['result'] == 'UPGRADED':
-                    pass
-                    # TBE:  Verify tst whenever it is possible.
-                    #       Generally I can verify a tst previously generated by others
-                    #       only if I have a trusted copy of the certificate of the TSA
-                    #       that issued the time stamp token.
-                    #       EU QTSP are listed in public lists with their certs.
-                    #       A trusted copy of the root CA certificate is needed too.
+                # process to verify/upgrade
+                self.verify_ots(tmpdir)
+                self.check_timestamps_status(tmpdir)
 
                 new_pathfile = get_new_name(self.pathfile)
                 zipdir(new_pathfile, tmpdir)
