@@ -33,7 +33,7 @@ def add_to_zip(fh_zip, name, arcname=None):
 
     # NOTE : an empty file could be accepted in general with a warning message
     #        because only when it's the single dataobject in the asic-s archive
-    #        it can't be timestamped, and so it will be catched inside tst.py
+    #        it can't be timestamped, and this error will be catched later
     if os.stat(name).st_size == 0:
         msg = "empty file %s" % name
         logging.warning(msg)
@@ -89,7 +89,7 @@ def there_can_be_only_one(pathfiles, pathzip=None):
     ''' asic-s MUST have a single dataobject (not empty)'''
 
 
-    # if there is only an empty file, do not create an azic-s archive with it
+    # if there is only an empty file, do not create an asic-s archive with it
     if len(pathfiles) == 1 and os.path.isfile(pathfiles[0]) and os.stat(pathfiles[0]).st_size == 0:
         msg = "can't create valid asic-s with an empty file(%s)" % pathfiles[0]
         logging.critical(msg)
@@ -158,8 +158,6 @@ def main(pathfiles):
     if len(pathfiles) == 1 and not os.path.isdir(pathfiles[0]):
         container = asic.ASiCS(pathfiles[0])
         if container.valid:
-            # FIXME: if the asic has just a tst, the user may want to choose
-            #        between complete with ots or just verify tst
             result_pathfile = pathfiles[0]
 
     # if it's not an asic-s, then create a new zip asic-s
