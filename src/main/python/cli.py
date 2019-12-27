@@ -148,7 +148,7 @@ def there_can_be_only_one(pathfiles, pathzip=None):
     return pathzip
 
 
-def main(pathfiles):
+def main(pathfiles, get_timebag_pathname=None):
     ''' Main '''
 
 
@@ -162,7 +162,7 @@ def main(pathfiles):
 
     # if it's not an asic-s, then create a new zip asic-s
     if result_pathfile is None:
-        result_pathfile = there_can_be_only_one(pathfiles)
+        result_pathfile = there_can_be_only_one(pathfiles, get_timebag_pathname)
 
     # if success creating asic-s, then complete it with timestamps
     if result_pathfile is not None:
