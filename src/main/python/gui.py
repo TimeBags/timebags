@@ -18,16 +18,16 @@ from fbs_runtime.application_context.PyQt5 import ApplicationContext
 from PyQt5.QtWidgets import QMainWindow, QLabel, QPushButton, QWidget, QVBoxLayout
 from PyQt5.QtWidgets import QFileDialog
 
+import os
 import sys
-
 
 
 def select_clicked():
     ''' control: Select Button on Main Window clicked'''
 
 
-    dialog = QFileDialog()
-    dialog.exec_()
+    home = os.path.expanduser("~")
+    files = QFileDialog.getOpenFileNames(None, None, home)
 
 def central_widget():
     ''' construct: Central Widget '''
