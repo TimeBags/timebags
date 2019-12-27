@@ -23,6 +23,7 @@ import settings
 import gui
 import cli
 
+
 def main():
     ''' Main '''
 
@@ -37,16 +38,15 @@ def main():
     # TBD: it's better to have --cli and check sys.argv[0] also for gui params
     #      but now just check if there are params
     if len(sys.argv) == 1:
-        ret = gui.main()
+        gui.main()
     elif len(sys.argv) > 1:
         ret = cli.main(sys.argv[1:])
-    if ret is not None:
         pprint(ret)
-        return 0
-    pprint(ret)
-    print("ERROR: check log for details")
-    return 1
+        if ret is not None:
+            sys.exit(0)
+        print("ERROR: check log for details")
+        sys.exit(1)
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    main()
