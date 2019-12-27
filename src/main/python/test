@@ -34,7 +34,7 @@ class TestMain(unittest.TestCase):
     def test_m1_main_one(self):
         ''' Test a regular file as single param '''
 
-        name = "Readme.md"
+        name = "tsa.yaml"
         msg = "##### Testing m1: regular file(%s) as single param"
         self.assertTrue(os.path.exists(name))
         ret = cli.main([name])
