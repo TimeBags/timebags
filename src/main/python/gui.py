@@ -15,9 +15,35 @@ This file belong to [TimeBags Project](https://timebags.org)
 '''
 
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
-from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtWidgets import QMainWindow, QLabel, QPushButton, QWidget, QVBoxLayout
+from PyQt5.QtWidgets import QFileDialog
 
 import sys
+
+
+
+def select_clicked():
+    ''' control: Select Button on Main Window clicked'''
+
+
+    dialog = QFileDialog()
+    dialog.exec_()
+
+def central_widget():
+    ''' construct: Central Widget '''
+
+    cw = QWidget()
+    cw.resize(200, 10)
+    layout = QVBoxLayout()
+    layout.addWidget(QLabel("To create or upgrade a Timebag, just drag files here\n"
+                            "or use the button below!"))
+    select = QPushButton("Select")
+    select.clicked.connect(select_clicked)
+    layout.addWidget(select)
+    layout.setContentsMargins(10, 10, 10, 10)
+    cw.setLayout(layout)
+    return cw
+
 
 
 def main():
@@ -26,6 +52,7 @@ def main():
     appctxt = ApplicationContext()       # 1. Instantiate ApplicationContext
     window = QMainWindow()
     window.resize(250, 150)
+    window.setCentralWidget(central_widget())
     window.show()
     exit_code = appctxt.app.exec_()      # 2. Invoke appctxt.app.exec_()
     sys.exit(exit_code)
