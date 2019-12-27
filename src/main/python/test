@@ -4,11 +4,11 @@
 #
 # This file is part of the TimeBags software.
 #
-# It is subject to the license terms in the LICENSE file-
+# It is subject to the license terms in the LICENSE file
 # found in the top-level directory of this distribution.
 #
 # No part of the Timebags software, including this file, may be copied,
-# modified, propagated, or distributed except according to the terms-
+# modified, propagated, or distributed except according to the terms
 # contained in the LICENSE file.
 
 '''
@@ -24,7 +24,7 @@ import logging
 
 import settings
 import asic
-import cli
+import core
 
 
 
@@ -37,8 +37,8 @@ class TestMain(unittest.TestCase):
         name = "test"
         msg = "##### Testing m1: regular file(%s) as single param"
         self.assertTrue(os.path.exists(name))
-        ret = cli.main([name])
-        msg = "Ret of cli.main(): %s" % repr(ret)
+        ret = core.main([name])
+        msg = "Ret of core.main(): %s" % repr(ret)
         logging.info(msg)
         self.assertTrue(os.path.exists(ret['pathfile']))
         self.assertTrue(ret['result'] == 'PENDING')
@@ -52,8 +52,8 @@ class TestMain(unittest.TestCase):
         msg = "##### Testing m2: non-existent file(%s) as single param" % name
         logging.info(msg)
         self.assertFalse(os.path.exists(name))
-        ret = cli.main([name])
-        msg = "Ret of cli.main(): %s" % repr(ret)
+        ret = core.main([name])
+        msg = "Ret of core.main(): %s" % repr(ret)
         logging.info(msg)
         self.assertTrue(ret is None)
 
@@ -64,8 +64,8 @@ class TestMain(unittest.TestCase):
         msg = "##### Testing m3: dir(%s) as single param" % name
         logging.info(msg)
         self.assertTrue(os.path.isdir(name))
-        ret = cli.main([name])
-        msg = "Ret of cli.main(): %s" % repr(ret)
+        ret = core.main([name])
+        msg = "Ret of core.main(): %s" % repr(ret)
         logging.info(msg)
         self.assertTrue(os.path.exists(ret['pathfile']))
         self.assertTrue(ret['result'] == 'PENDING')
@@ -79,8 +79,8 @@ class TestMain(unittest.TestCase):
         msg = "##### Testing m4: list of files(%s) as param" % names
         logging.info(msg)
         self.assertFalse(len(names) < 2)
-        ret = cli.main(names)
-        msg = "Ret of cli.main(): %s" % repr(ret)
+        ret = core.main(names)
+        msg = "Ret of core.main(): %s" % repr(ret)
         logging.info(msg)
         self.assertTrue(os.path.exists(ret['pathfile']))
         self.assertTrue(ret['result'] == 'PENDING')
@@ -94,7 +94,7 @@ class TestMain(unittest.TestCase):
         msg = "##### Testing m5: empty file(%s) as param" % name
         logging.info(msg)
         self.assertTrue(os.path.isfile(name))
-        self.assertTrue(cli.main([name]) is None)
+        self.assertTrue(core.main([name]) is None)
 
     def test_m6_main_two_empty(self):
         ''' Test two empty files as param '''
@@ -105,8 +105,8 @@ class TestMain(unittest.TestCase):
         self.assertFalse(len(names) < 2)
         for name in names:
             self.assertTrue(os.path.isfile(name))
-        ret = cli.main(names)
-        msg = "Ret of cli.main(): %s" % repr(ret)
+        ret = core.main(names)
+        msg = "Ret of core.main(): %s" % repr(ret)
         logging.info(msg)
         self.assertTrue(os.path.exists(ret['pathfile']))
         self.assertTrue(ret['result'] == 'PENDING')
@@ -120,8 +120,8 @@ class TestMain(unittest.TestCase):
         msg = "##### Testing m7: dir of empty files(%s) as param" % name
         logging.info(msg)
         self.assertTrue(os.path.isdir(name))
-        ret = cli.main([name])
-        msg = "Ret of cli.main(): %s" % repr(ret)
+        ret = core.main([name])
+        msg = "Ret of core.main(): %s" % repr(ret)
         logging.info(msg)
         self.assertTrue(os.path.exists(ret['pathfile']))
         self.assertTrue(ret['result'] == 'PENDING')
@@ -136,7 +136,7 @@ class TestMain(unittest.TestCase):
         logging.info(msg)
         self.assertTrue(os.path.exists(name))
         self.assertFalse(os.path.isfile(name))
-        self.assertTrue(cli.main([name]) is None)
+        self.assertTrue(core.main([name]) is None)
 
     def test_m9_main_two_special(self):
         ''' Test many special files as param '''
@@ -148,7 +148,7 @@ class TestMain(unittest.TestCase):
         for name in names:
             self.assertTrue(os.path.exists(name))
             self.assertFalse(os.path.isfile(name))
-        self.assertTrue(cli.main(names) is None)
+        self.assertTrue(core.main(names) is None)
 
     def test_m10_main_dir_of_special(self):
         ''' Test a dir of special files as param '''
@@ -157,7 +157,7 @@ class TestMain(unittest.TestCase):
         msg = "##### Testing m10: dir of special files(%s) as param" % name
         logging.info(msg)
         self.assertTrue(os.path.isdir(name))
-        self.assertTrue(cli.main([name]) is None)
+        self.assertTrue(core.main([name]) is None)
 
     def test_m11_main_permitted(self):
         ''' Test not permitted files '''
@@ -166,7 +166,7 @@ class TestMain(unittest.TestCase):
         msg = "##### Testing m11: not permitted files(%s) as param" % name
         logging.info(msg)
         self.assertTrue(os.path.isdir(name))
-        self.assertTrue(cli.main([name]) is None)
+        self.assertTrue(core.main([name]) is None)
 
 
 class TestAsic(unittest.TestCase):
@@ -233,7 +233,7 @@ class TestAsic(unittest.TestCase):
 if __name__ == '__main__':
 
     settings.init()
-    #logfile = os.path.join("tests","test.log")
-    #logging.basicConfig(filename=logfile, filemode='w', level=logging.DEBUG)
-    logging.basicConfig(level=logging.DEBUG)
+    logfile = os.path.join("tests","test.log")
+    logging.basicConfig(filename=logfile, filemode='w', level=logging.DEBUG)
+    #logging.basicConfig(level=logging.DEBUG)
     unittest.main()

@@ -21,7 +21,7 @@ from pprint import pprint
 
 import settings
 import gui
-import cli
+import core
 
 
 def main():
@@ -40,7 +40,7 @@ def main():
     if len(sys.argv) == 1:
         gui.main()
     elif len(sys.argv) > 1:
-        ret = cli.main(sys.argv[1:])
+        ret = core.main(sys.argv[1:])
         pprint(ret)
         if ret is not None:
             sys.exit(0)

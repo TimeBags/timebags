@@ -3,11 +3,11 @@
 #
 # This file is part of the TimeBags software.
 #
-# It is subject to the license terms in the LICENSE file-
+# It is subject to the license terms in the LICENSE file
 # found in the top-level directory of this distribution.
 #
 # No part of the Timebags software, including this file, may be copied,
-# modified, propagated, or distributed except according to the terms-
+# modified, propagated, or distributed except according to the terms
 # contained in the LICENSE file.
 
 '''
@@ -21,7 +21,7 @@ from fbs_runtime.application_context.PyQt5 import ApplicationContext
 from PyQt5.QtWidgets import QMainWindow, QLabel, QPushButton, QWidget, QVBoxLayout
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
 
-import cli
+import core
 
 
 class AppContext(ApplicationContext):
@@ -54,7 +54,7 @@ class AppContext(ApplicationContext):
         home = os.path.expanduser("~")
         files, _ = QFileDialog.getOpenFileNames(None, None, home)
         if files is not None:
-            ret = cli.main(files, self.get_save_filename())
+            ret = core.main(files, self.get_save_filename())
             if ret is not None:
                 msg = repr(ret)
             else:
