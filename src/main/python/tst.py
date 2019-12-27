@@ -30,7 +30,6 @@ openssl ts -verify -data Readme.md -in timestamp.tst -CAfile freetsa.pem -partia
 '''
 
 import os
-import inspect
 from struct import unpack
 import logging
 from rfc3161ng import RemoteTimestamper, get_timestamp, check_timestamp, TimeStampToken
@@ -47,11 +46,11 @@ def get_token(data):
 
     tst = None
     tsa_url = None
-    with open(os.path.join(settings.path_tsa_dir, settings.tsa_yaml)) as tsa_list_fh:
+    with open(settings.tsa_yaml()) as tsa_list_fh:
         tsa_list = yaml.load(tsa_list_fh, Loader=yaml.FullLoader)
 
         for tsa in tsa_list:
-            tsa_pathfile = os.path.join(settings.path_tsa_dir, tsa['tsacrt'])
+            tsa_pathfile = os.path.join(settings.path_tsa_dir(), tsa['tsacrt'])
             if not os.path.isfile(tsa_pathfile):
                 msg = "TSA cert file missing for %s" % tsa['url']
                 logging.info(msg)
@@ -122,8 +121,7 @@ def verify_tst(tst_pf, dat_pf):
 
     # FIXME: why geting crt from tst does not work?
     # crt = load_certificate(tst.content, b'')
-    app_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-    with open(os.path.join(app_dir, settings.freetsa_pem), mode='rb') as crt_fd:
+    with open(settings.freetsa_pem(), mode='rb') as crt_fd:
         crt = crt_fd.read()
 
     ret = False

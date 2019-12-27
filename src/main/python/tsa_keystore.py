@@ -1,4 +1,41 @@
------BEGIN CERTIFICATE-----
+'''
+TSA keysore
+'''
+
+def create_tsa_yaml(tsa_yaml):
+    ''' create default tsa configuration file '''
+
+    data = \
+'''
+- # Free TSA
+    url: https://freetsa.org/tsr
+    tsacrt: freetsa.pem
+    cacrt: null
+    username: null
+    password: null
+    timeout: 10
+    hashname: sha256
+    include_tsa_cert: true
+
+#- # Comodo TSA
+    # url: http://timestamp.comodoca.com/rfc3161
+    # tsacrt: comodotsa.pem
+    # cacrt: null
+    # username: null
+    # password: null
+    # timeout: 10
+    # hashname: sha256
+    # include_tsa_cert: false '''
+
+    with open(tsa_yaml, 'x') as ty_fd:
+        ty_fd.write(data)
+
+
+def create_freetsa_pem(freetsa_pem):
+    ''' create freetsa certificate pem file '''
+
+    data = \
+'''-----BEGIN CERTIFICATE-----
 MIIIATCCBemgAwIBAgIJAMHphhYNqOmCMA0GCSqGSIb3DQEBDQUAMIGVMREwDwYD
 VQQKEwhGcmVlIFRTQTEQMA4GA1UECxMHUm9vdCBDQTEYMBYGA1UEAxMPd3d3LmZy
 ZWV0c2Eub3JnMSIwIAYJKoZIhvcNAQkBFhNidXNpbGV6YXNAZ21haWwuY29tMRIw
@@ -42,4 +79,7 @@ QQUjgn1PU0AMciGNdSKf8QxviJOpo6HAxCu0yJjBPfQcf2VztPxWUVlxphCnsNKF
 fIIlqfsgTqzsouiXGqGvh4hqKuPHL+CgquhCmAp3vvFrkhFUWAkNmCtZRmA3ZOda
 CtPRFFS5mG9ni5q2r+hJcDOuOr/U60O3vJ3uaIFZSeZIFYKoLnhSd/IoIQfv45Ag
 DgUIrLjqguolBSdvPJ2io9O0rTi7+IQr2jb8JEgpH1WNwC3R4A==
------END CERTIFICATE-----
+-----END CERTIFICATE-----'''
+
+    with open(freetsa_pem, 'x') as pem_fd:
+        pem_fd.write(data)

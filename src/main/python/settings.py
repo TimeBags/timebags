@@ -2,38 +2,53 @@
 Global settings
 '''
 import os
-import inspect
 import ctypes
-import shutil
+import tsa_keystore
+
+
+def tsa_yaml():
+    ''' Get the TSA configuration filename '''
+
+    return os.path.join(path_tsa_dir(), "tsa.yaml")
+
+def freetsa_pem():
+    ''' Get the FreeTSA certificate filename '''
+
+    return os.path.join(path_tsa_dir(), "freetsa.pem")
+
+def path_conf_dir():
+    ''' Get the conf dir full pathname '''
+
+    home = os.path.expanduser("~")
+    prefix = '.' if os.name != 'nt' else ''
+    return os.path.join(home, prefix + "timebags")
+
+
+def path_tsa_dir():
+    ''' Get the tsa dir full pathname '''
+
+    return os.path.join(path_conf_dir(), 'tsa')
+
 
 def init():
     ''' Initializing env and global vars '''
 
-    global path_conf_dir
-    global path_tsa_dir
-    global tsa_yaml
-    global freetsa_pem
+    conf_dir = path_conf_dir()
 
     # check/create conf dir
-    home = os.path.expanduser("~")
-    prefix = '.' if os.name != 'nt' else ''
-    path_conf_dir = os.path.join(home, prefix + "timebags")
-    if not os.path.exists(path_conf_dir):
-        os.mkdir(path_conf_dir)
+    if not os.path.exists(conf_dir):
+        os.mkdir(conf_dir)
         if os.name == 'nt':
-            if not ctypes.windll.kernel32.SetFileAttributesW(path_conf_dir, 0x02):
+            if not ctypes.windll.kernel32.SetFileAttributesW(conf_dir, 0x02):
                 raise ctypes.WinError()
 
-    if not os.path.isdir(path_conf_dir):
-        error = "unable to use configuration dir: " % path_conf_dir
+    if not os.path.isdir(conf_dir):
+        error = "unable to use configuration dir: " % conf_dir
         raise Exception(error)
 
     # check/create tsa files
-    tsa_yaml = 'tsa.yaml'
-    freetsa_pem = 'freetsa.pem'
-    app_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-    path_tsa_dir = os.path.join(path_conf_dir, 'tsa')
-    if not os.path.exists(path_tsa_dir):
-        os.makedirs(path_tsa_dir)
-        shutil.copy(os.path.join(app_dir, tsa_yaml), path_tsa_dir)
-        shutil.copy(os.path.join(app_dir, freetsa_pem), path_tsa_dir)
+    tsa_dir = path_tsa_dir()
+    if not os.path.exists(tsa_dir):
+        os.makedirs(path_tsa_dir())
+        tsa_keystore.create_tsa_yaml(tsa_yaml())
+        tsa_keystore.create_freetsa_pem(freetsa_pem())
