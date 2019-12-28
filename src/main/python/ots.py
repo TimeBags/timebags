@@ -376,6 +376,7 @@ def ots_verify(filename_ots):
         msg = "Hashing file, algorithm %s" % detached_timestamp.file_hash_op.TAG_NAME
         logging.debug(msg)
         actual_file_digest = detached_timestamp.file_hash_op.hash_fd(target_fd)
+        target_fd.close()
         msg = "Got digest %s" % b2x(actual_file_digest)
         logging.debug(msg)
 
