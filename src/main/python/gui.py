@@ -38,7 +38,7 @@ def select_clicked():
 
     home = os.path.expanduser("~")
     files, _ = QFileDialog.getOpenFileNames(None, None, home)
-    if files is not None:
+    if files:
         ret = core.main(files, get_save_filename())
         if ret is not None:
             msg = repr(ret)
