@@ -241,11 +241,10 @@ class ASiCS():
             with open(data_pf, mode='rb') as data_object:
                 data = data_object.read()
 
-            if len(data) > 0:
+            if data: # if len(data) > 0:
 
-                ret = tst.get_token(data)
-                if ret is not None:
-                    token, date_time, info = ret
+                token, date_time, info = tst.get_token(data)
+                if token is not None:
                     with open(tst_pf, mode='xb') as tst_fd:
                         tst_fd.write(token)
                     self.status['dat-tst'] = (date_time, info)

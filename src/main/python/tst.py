@@ -84,7 +84,7 @@ def get_token(data):
 
     msg = "none of the TSA provided a timestamp"
     logging.critical(msg)
-    return None
+    return (None, None, None)
 
 
 def get_info(tst):
