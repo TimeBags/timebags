@@ -162,7 +162,12 @@ def main(pathfiles, get_timebag_pathname=None):
 
     # if it's not an asic-s, then create a new zip asic-s
     if result_pathfile is None:
-        result_pathfile = there_can_be_only_one(pathfiles, get_timebag_pathname)
+        if get_timebag_pathname is None: # call came from CLI
+            result_pathfile = there_can_be_only_one(pathfiles)
+        else: # call came from GUI, use the dialog to get pathzip
+            pathzip = get_timebag_pathname()
+            if pathzip:
+                result_pathfile = there_can_be_only_one(pathfiles, pathzip)
 
     # if success creating asic-s, then complete it with timestamps
     if result_pathfile is not None:
