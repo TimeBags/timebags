@@ -183,6 +183,7 @@ def main(pathfiles, get_timebag_pathname=None):
                 (result_pathfile, container.status['result'])
         logging.info(msg)
 
+        # FIXME: pathfile should be changed everywhere from var to dict
         container.status['pathfile'] = container.pathfile
         return container.status
 
