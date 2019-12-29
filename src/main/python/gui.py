@@ -6,7 +6,7 @@
 # It is subject to the license terms in the LICENSE file
 # found in the top-level directory of this distribution.
 #
-# No part of the Timebags software, including this file, may be copied,
+# No part of the TimeBags software, including this file, may be copied,
 # modified, propagated, or distributed except according to the terms
 # contained in the LICENSE file.
 
@@ -33,6 +33,10 @@ class MyMainWindow(QMainWindow):
         home = os.path.expanduser("~")
         dialog = QFileDialog(self)
         filename, _ = dialog.getSaveFileName(self, None, home)
+        msg = "Wait a minute, please..."
+        alert = QMessageBox()
+        alert.setText(msg)
+        alert.exec_()
         return filename
 
 
@@ -79,7 +83,7 @@ class AppContext(ApplicationContext):
 
         window = MyMainWindow()
         version = self.build_settings['version']
-        window.setWindowTitle("Timebags ver. %s" % version)
+        window.setWindowTitle("TimeBags ver. %s" % version)
         window.resize(250, 150)
         window.setCentralWidget(window.central_widget())
         window.show()
