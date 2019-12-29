@@ -146,10 +146,10 @@ class ASiCS():
         # result  = UNKNOWN | INCOMPLETE | PENDING | UPGRADED | CORRUPTED
         # asic-s  = description string to explain many cases of not valid asic-s
         # dat-tst = (<date_time>, <tsa-info>)
-        # *-ots   = ('PENDING|CORRUPTED', None) | ('UPGRADED', [attestation, ...])
+        # *-ots   = ('PENDING|CORRUPTED', []) | ('UPGRADED', [attestation, ...])
         #            attestation = (<block height>, '<merkle-root>')
         self.status = {'result': 'UNKNOWN', 'asic-s': None, 'dat-tst': (None, None),
-                       'dat-ots': (None, None), 'tst-ots': (None, None)}
+                       'dat-ots': (None, []), 'tst-ots': (None, [])}
 
         if not zipfile.is_zipfile(self.pathfile):
             self.status['asic-s'] = "%s is not a zip archive" % self.pathfile
@@ -275,7 +275,7 @@ class ASiCS():
             # if tst is present then move on adding or upgrading ots
             if not os.path.exists(tst_ots_pf):
                 if ots.ots_stamp([tst_pf], timeout=20):
-                    self.status['tst-ots'] = ('PENDING', None)
+                    self.status['tst-ots'] = ('PENDING', [])
                     msg = "Done ots of tst"
                     logging.debug(msg)
                 else:
@@ -296,7 +296,7 @@ class ASiCS():
         # verify data ots
         shutil.move(data_ots_pf, data_ots_tmp)
         res, att = ots.ots_verify(data_ots_tmp)
-        self.status['dat-ots'] = (res, att)
+        self.status['dat-ots'] = (res, att if att else [])
         msg = "Verify dat-ots result: %s %s" % (res, att)
         logging.debug(msg)
         shutil.move(data_ots_tmp, data_ots_pf)
@@ -304,7 +304,7 @@ class ASiCS():
 
         # verify tst ots
         res, att = ots.ots_upgrade(tst_ots_pf)
-        self.status['tst-ots'] = (res, att)
+        self.status['tst-ots'] = (res, att if att else [])
         msg = "Verify tst-ots result: %s %s" % (res, att)
         logging.debug(msg)
 
