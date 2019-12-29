@@ -31,12 +31,12 @@ def main():
     settings.init()
 
     # default log to a file at DEBUG level if running in GUI mode
-    #logfile = os.path.join(settings.path_conf_dir, "debug.log")
-    #logging.basicConfig(filename=logfile, filemode='w', level=logging.DEBUG)
-    logging.basicConfig(level=logging.DEBUG)
+    logfile = os.path.join(settings.path_conf_dir, "debug.log")
+    logging.basicConfig(filename=logfile, filemode='w', level=logging.DEBUG)
 
-    # TBD: it's better to have --cli and check sys.argv[0] also for gui params
-    #      but now just check if there are params
+    # TODO: it's better to have --cli option and check sys.argv[0] also for gui params
+    #       but now just check if there are params
+    #       all the args evaluation will has to be moved into settings.init()
     if len(sys.argv) == 1:
         gui.main()
     elif len(sys.argv) > 1:
