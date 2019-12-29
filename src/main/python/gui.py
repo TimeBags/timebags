@@ -51,12 +51,15 @@ class ResultDialog(QDialog):
         btc_blocks = []
         for attestation in status['dat-ots'][1] + status['tst-ots'][1]:
             btc_blocks += [attestation[0]]
-        self.form_groupbox = QGroupBox("Form layout")
+        self.form_groupbox = QGroupBox("Report")
+        tsa_url = status['dat-tst'][1]
+        tsa = QLabel("<a href=\"%s\">%s</a>" % (tsa_url, tsa_url))
+        tsa.setOpenExternalLinks(True)
         layout = QFormLayout()
         layout.addRow(QLabel("File:"), QLabel(status['pathfile']))
         layout.addRow(QLabel("Status:"), QLabel(status['result']))
+        layout.addRow(QLabel("Time Stamp Authority:"), tsa)
         layout.addRow(QLabel("Time Stamped:"), QLabel(str(status['dat-tst'][0])))
-        layout.addRow(QLabel("Time Stamp Authority:"), QLabel(status['dat-tst'][1]))
         layout.addRow(QLabel("BTC Blocks:"), QLabel(repr(sorted(set(btc_blocks)))))
         self.form_groupbox.setLayout(layout)
 
