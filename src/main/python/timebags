@@ -16,6 +16,7 @@ This file belong to [TimeBags Project](https://timebags.org)
 '''
 
 import sys
+import os
 import logging
 from pprint import pprint
 
@@ -31,7 +32,7 @@ def main():
     settings.init()
 
     # default log to a file at DEBUG level if running in GUI mode
-    logfile = os.path.join(settings.path_conf_dir, "debug.log")
+    logfile = os.path.join(settings.path_conf_dir(), "debug.log")
     logging.basicConfig(filename=logfile, filemode='w', level=logging.DEBUG)
 
     # TODO: it's better to have --cli option and check sys.argv[0] also for gui params
