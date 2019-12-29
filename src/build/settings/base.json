@@ -1,5 +1,5 @@
 {
-    "app_name": "Timebags",
+    "app_name": "TimeBags",
     "author": "Emanuele Cisbani",
     "main_module": "src/main/python/timebags",
     "version": "0.0.0"
