@@ -114,9 +114,11 @@ def there_can_be_only_one(pathfiles, pathzip=None):
             pathzip = prefix + "_" + str(name_number) + ".zip"
 
     elif os.path.exists(pathzip):
-        # FIXME: when invoked by GUI the user has to be asked for the path
-        # FIXME: this check could be moved to args check
+        # TODO: when invoked by GUI this check has to be done after DialogSaveFile
+        # TODO: when invoked by CLI this check has to be done validating args
         msg = "zipfile name provided already exists: %s" % pathzip
+        logging.error(msg)
+        # something nasty it's appening if we are here
         raise Exception(msg)
 
     # create the asic-s zip
