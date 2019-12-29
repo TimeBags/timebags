@@ -114,11 +114,11 @@ def there_can_be_only_one(pathfiles, pathzip=None):
             pathzip = prefix + "_" + str(name_number) + ".zip"
 
     elif os.path.exists(pathzip):
-        # TODO: when invoked by GUI this check has to be done after DialogSaveFile
-        # TODO: when invoked by CLI this check has to be done validating args
+        # when invoked by GUI this check has already be done in get_save_filename()
+        # when invoked by CLI the new timebag filename is not choosen by user
         msg = "zipfile name provided already exists: %s" % pathzip
         logging.error(msg)
-        # something nasty it's appening if we are here
+        # then, something nasty it's appening if we are here!
         raise Exception(msg)
 
     # create the asic-s zip

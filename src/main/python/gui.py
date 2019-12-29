@@ -32,7 +32,20 @@ class MyMainWindow(QMainWindow):
 
         home = os.path.expanduser("~")
         dialog = QFileDialog(self)
-        filename, _ = dialog.getSaveFileName(self, None, home)
+        options = (QFileDialog.DontConfirmOverwrite)
+        filename, _ = dialog.getSaveFileName(self, "Choose a new name for your TimeBags",
+                                                home, 'Zip File (*.zip)', None, options)
+        # check if already exists
+        while os.path.exists(filename):
+            msg = "File %s already exist!\nPlease use a different name." % filename
+            alert = QMessageBox()
+            alert.setText(msg)
+            alert.exec_()
+            filename, _ = dialog.getSaveFileName(self, "Choose a new name for your TimeBags",
+                                                home, 'Zip File (*.zip)', None, options)
+
+        # FIXME: This is just an ugly workaround, otherwise dialog does not close...
+        #        An experienced Qt5 programmer is welcome!
         msg = "Wait a minute, please..."
         alert = QMessageBox()
         alert.setText(msg)
