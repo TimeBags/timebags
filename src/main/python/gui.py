@@ -142,11 +142,8 @@ class MyMainWindow(QMainWindow):
         self.version = version
 
     def about_dialog(self):
+        ''' display the About Dialog '''
         dialog = AboutDialog(self.version)
-        dialog.exec_()
-
-    def license_dialog(self):
-        dialog = LicenseDialog()
         dialog.exec_()
 
     def create_menubar(self):
@@ -159,8 +156,13 @@ class MyMainWindow(QMainWindow):
         about_btn.triggered.connect(self.about_dialog)
         help_menu.addAction(about_btn)
 
+        def license_dialog():
+            ''' Display the License Dialog '''
+            dialog = LicenseDialog()
+            dialog.exec_()
+
         license_btn = QAction('License', self)
-        license_btn.triggered.connect(self.license_dialog)
+        license_btn.triggered.connect(license_dialog)
         help_menu.addAction(license_btn)
 
         exit_btn = QAction('Exit', self)

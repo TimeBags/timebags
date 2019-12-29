@@ -60,7 +60,7 @@ def create_timestamp(timestamp, calendar_urls, min_resp, timeout):
 
     start = time.time()
     merged = 0
-    for i in range(n_cals): # pylint: disable=W0612
+    for _ in range(n_cals):
         try:
             remaining = max(0, timeout - (time.time() - start))
             result = q_cals.get(block=True, timeout=remaining)
