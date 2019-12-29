@@ -18,10 +18,46 @@ import os
 import sys
 
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
-from PyQt5.QtWidgets import QMainWindow, QLabel, QPushButton, QWidget, \
-QVBoxLayout, QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QLabel, QPushButton, QWidget, QVBoxLayout,\
+QFileDialog, QMessageBox, QDialog, QDialogButtonBox, QGroupBox, QFormLayout
 
 import core
+
+
+
+class MyDialog(QDialog):
+    ''' Dialog to display the result '''
+
+    def __init__(self, result):
+        super(MyDialog, self).__init__()
+        self.create_form_groupbox(result)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok)
+        button_box.accepted.connect(self.accept)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.addWidget(self.form_groupbox)
+        layout.addWidget(button_box)
+        self.setLayout(layout)
+        self.setWindowTitle("Your TimeBag status")
+
+
+    def create_form_groupbox(self, status):
+        ''' Form to display the result '''
+
+        btc_blocks = []
+        for attestation in status['dat-ots'][1] + status['tst-ots'][1]:
+            btc_blocks += [attestation[0]]
+        self.form_groupbox = QGroupBox("Form layout")
+        layout = QFormLayout()
+        layout.addRow(QLabel("File:"), QLabel(status['pathfile']))
+        layout.addRow(QLabel("Status:"), QLabel(status['result']))
+        layout.addRow(QLabel("Time Stamped:"), QLabel(str(status['dat-tst'][0])))
+        layout.addRow(QLabel("Time Stamp Authority:"), QLabel(status['dat-tst'][1]))
+        layout.addRow(QLabel("BTC Blocks:"), QLabel(repr(sorted(set(btc_blocks)))))
+        self.form_groupbox.setLayout(layout)
+
 
 
 class MyMainWindow(QMainWindow):
@@ -30,11 +66,19 @@ class MyMainWindow(QMainWindow):
     def get_save_filename(self):
         ''' Ask for a filename to save new timebag '''
 
+        # explain to the user what we need
+        msg = "Please choose a name for the new TimeBag zip file.\n" \
+                "For example: 'timebag.zip'\n"
+        alert = QMessageBox()
+        alert.setText(msg)
+        alert.exec_()
+
+        # get the pathfile name
         home = os.path.expanduser("~")
         dialog = QFileDialog(self)
         options = (QFileDialog.DontConfirmOverwrite)
         filename, _ = dialog.getSaveFileName(self, "Choose a new name for your TimeBags",
-                                                home, 'Zip File (*.zip)', None, options)
+                                             home, 'Zip File (*.zip)', None, options)
         # check if already exists
         while os.path.exists(filename):
             msg = "File %s already exist!\nPlease use a different name." % filename
@@ -42,11 +86,11 @@ class MyMainWindow(QMainWindow):
             alert.setText(msg)
             alert.exec_()
             filename, _ = dialog.getSaveFileName(self, "Choose a new name for your TimeBags",
-                                                home, 'Zip File (*.zip)', None, options)
+                                                 home, 'Zip File (*.zip)', None, options)
 
         # FIXME: This is just an ugly workaround, otherwise dialog does not close...
         #        An experienced Qt5 programmer is welcome!
-        msg = "Wait a minute, please..."
+        msg = "Press the [Ok] button below\nand wait a minute, please..."
         alert = QMessageBox()
         alert.setText(msg)
         alert.exec_()
@@ -62,12 +106,14 @@ class MyMainWindow(QMainWindow):
         if files:
             ret = core.main(files, self.get_save_filename)
             if ret is not None:
-                msg = repr(ret)
+                dialog = MyDialog(ret)
+                dialog.exec_()
             else:
                 msg = "Some error occurred.\nSee the log file for details."
-            alert = QMessageBox()
-            alert.setText(msg)
-            alert.exec_()
+                alert = QMessageBox()
+                alert.setText(msg)
+                alert.exec_()
+
 
 
     def central_widget(self):
