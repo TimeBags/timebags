@@ -273,7 +273,7 @@ def ots_upgrade(filename):
             detached_timestamp = DetachedTimestampFile.deserialize(ctx)
 
     except IOError as exp:
-        msg = "Could not read file %s: %s" % (old_stamp_fd.name, exp)
+        msg = "Could not read file %s: %s" % (filename, exp)
         logging.error(msg)
         raise
     except BadMagicError:
