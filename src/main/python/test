@@ -162,7 +162,24 @@ class TestMain(unittest.TestCase):
     def test_m11_main_permitted(self):
         ''' Test not permitted files '''
 
-        name = os.path.join(os.sep, "proc", "1")
+        name = None
+        if os.name == 'posix':
+
+            macos_name = os.path.join(os.sep, ".fseventsd")
+            linux_name = os.path.join(os.sep, "proc", "1")
+            if os.path.isdir(linux_name):
+                name = linux_name
+            elif os.path.isdir(macos_name):
+                name = macos_name
+
+        elif os.name == 'nt':
+            # FIXME: need to set a not permitted path on Windows
+            pass
+
+        if name is None:
+            logging.error("Not permitted path not found")
+            self.assertTrue(False)
+
         msg = "##### Testing m11: not permitted files(%s) as param" % name
         logging.info(msg)
         self.assertTrue(os.path.isdir(name))
