@@ -182,6 +182,7 @@ class MyMainWindow(QMainWindow):
         # get the pathfile name
         home = os.path.expanduser("~")
         dialog = QFileDialog(self)
+        # DontConfirmOverwrite because is managed later and rejected
         options = (QFileDialog.DontConfirmOverwrite)
         filename, _ = dialog.getSaveFileName(self, "Choose a new name for your TimeBags",
                                              home, 'Zip File (*.zip)', None, options)
@@ -210,6 +211,9 @@ class MyMainWindow(QMainWindow):
         dialog = QFileDialog(self)
         files, _ = dialog.getOpenFileNames(self, None, home)
         if files:
+            # here should be opened an observer window
+            pass
+            # here the real job is done by the observed object
             ret = core.main(files, self.get_save_filename)
             if ret is not None:
                 dialog = ResultDialog(ret)
