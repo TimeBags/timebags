@@ -121,19 +121,29 @@ def verify_tst(tst_pf, dat_pf):
 
     # FIXME: why geting crt from tst does not work?
     # crt = load_certificate(tst.content, b'')
-    with open(settings.freetsa_pem(), mode='rb') as crt_fd:
-        crt = crt_fd.read()
-
     ret = False
-    try:
-        ret = check_timestamp(tst, data=dat, certificate=crt, hashname=hashname)
-    except ValueError as err:
-        msg = "ValueError: %s" % str(err)
-        logging.critical(msg)
-    except InvalidSignature:
-        msg = "InvalidSignature"
-        logging.critical(msg)
-    return ret
+    with open(settings.tsa_yaml()) as tsa_list_fh:
+        tsa_list = yaml.load(tsa_list_fh, Loader=yaml.FullLoader)
+
+        for tsa in tsa_list:
+            tsa_pathfile = os.path.join(settings.path_tsa_dir(), tsa['tsacrt'])
+            if not os.path.isfile(tsa_pathfile):
+                msg = "TSA cert file missing for %s" % tsa['url']
+                logging.info(msg)
+                continue
+
+            with open(tsa_pathfile, 'rb') as tsa_fh:
+                crt = tsa_fh.read()
+
+            try:
+                ret = check_timestamp(tst, data=dat, certificate=crt, hashname=hashname)
+            except ValueError as err:
+                msg = "ValueError: %s" % str(err)
+                logging.critical(msg)
+            except InvalidSignature:
+                msg = "InvalidSignature"
+                logging.critical(msg)
+            return ret
 
 
 def get_tsa_common_name(tst):
