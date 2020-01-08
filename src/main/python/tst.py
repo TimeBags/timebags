@@ -137,13 +137,15 @@ def verify_tst(tst_pf, dat_pf):
 
             try:
                 ret = check_timestamp(tst, data=dat, certificate=crt, hashname=hashname)
+                break
             except ValueError as err:
                 msg = "ValueError: %s" % str(err)
                 logging.critical(msg)
             except InvalidSignature:
                 msg = "InvalidSignature"
                 logging.critical(msg)
-            return ret
+
+    return ret
 
 
 def get_tsa_common_name(tst):
