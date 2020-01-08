@@ -294,17 +294,23 @@ class ASiCS():
 
 
         # verify data ots
-        shutil.move(data_ots_pf, data_ots_tmp)
-        res, att = ots.ots_verify(data_ots_tmp)
-        self.status['dat-ots'] = (res, att if att else [])
+        if os.path.exists(data_ots_pf):
+            shutil.move(data_ots_pf, data_ots_tmp)
+            res, att = ots.ots_verify(data_ots_tmp)
+            self.status['dat-ots'] = (res, att if att else [])
+            shutil.move(data_ots_tmp, data_ots_pf)
+        else:
+            self.status['dat-ots'] = (None, [])
         msg = "Verify dat-ots result: %s %s" % (res, att)
         logging.debug(msg)
-        shutil.move(data_ots_tmp, data_ots_pf)
 
 
         # verify tst ots
-        res, att = ots.ots_upgrade(tst_ots_pf)
-        self.status['tst-ots'] = (res, att if att else [])
+        if os.path.exists(tst_ots_pf):
+            res, att = ots.ots_upgrade(tst_ots_pf)
+            self.status['tst-ots'] = (res, att if att else [])
+        else:
+            self.status['tst-ots'] = (None, [])
         msg = "Verify tst-ots result: %s %s" % (res, att)
         logging.debug(msg)
 
