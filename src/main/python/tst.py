@@ -68,6 +68,8 @@ def get_token(data):
             logging.debug(msg)
             try:
                 tst = timestamper.timestamp(data=data, nonce=nonce)
+# TODO: does the timestamp method compare result with current datetime?
+# rfc3161ng.get_timestamp(tst) must be very close to current datetime
             except RuntimeError as err:
                 logging.debug(err)
             except InvalidSignature:
