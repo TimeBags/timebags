@@ -37,7 +37,7 @@ def main():
 
     # TODO: it's better to have --cli option and check sys.argv[0] also for gui params
     #       but now just check if there are params
-    #       all the args evaluation will has to be moved into settings.init()
+    #       all the args evaluation have to be moved into settings.init()
     if len(sys.argv) == 1:
         gui.main()
     elif len(sys.argv) > 1:
