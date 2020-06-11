@@ -1,6 +1,6 @@
 rfc3161ng==2.1.1
 opentimestamps-client==0.7.0
-PyYAML==5.2
+PyYAML==5.3.1
 PyInstaller==3.6
 PyQt5==5.14.0
 fbs==0.8.4
