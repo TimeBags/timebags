@@ -16,52 +16,192 @@ This file belong to [TimeBags Project](https://timebags.org)
 
 import os
 import sys
+from time import sleep
 
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
-from PyQt5.QtWidgets import QMainWindow, QLabel, QPushButton, QWidget, QVBoxLayout,\
-QFileDialog, QMessageBox, QDialog, QDialogButtonBox, QGroupBox, QFormLayout, QAction, \
-QPlainTextEdit
+from PyQt5.QtWidgets import (QMainWindow, QLabel, QPushButton, QWidget, QVBoxLayout,
+                             QFileDialog, QMessageBox, QDialog, QDialogButtonBox,
+                             QGroupBox, QFormLayout, QAction, QPlainTextEdit,
+                             QProgressBar)
 from PyQt5.QtGui import QFontDatabase, QTextCursor
+from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 
 import core
 import gplv3
 
+# global condition var accessible to threads (ugly but working)
+# pylint: disable=W0603,W0604,C0103
+global pathname
+pathname = None
 
-class ResultDialog(QDialog):
-    ''' Dialog to display the result '''
+class Worker(QObject):
+    ''' The worker class doing real job on a dedicated thread '''
 
-    def __init__(self, result):
-        super(ResultDialog, self).__init__()
-        self.create_form_groupbox(result)
+    request_pathname = pyqtSignal()
+    result = pyqtSignal(dict)
+    finished = pyqtSignal()
 
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok)
-        button_box.accepted.connect(self.accept)
+    @pyqtSlot(list)
+    def real_job(self, files):
+        ''' get status '''
 
-        layout = QVBoxLayout()
-        layout.setContentsMargins(10, 10, 10, 10)
-        layout.addWidget(self.form_groupbox)
-        layout.addWidget(button_box)
-        self.setLayout(layout)
+        ret = core.main(files, self.get_pathname)
+        self.result.emit(ret)
+        self.finished.emit()
+
+    @pyqtSlot()
+    def get_pathname(self):
+        ''' get pathname of zip file to save '''
+
+        global pathname
+        pathname = None
+        self.request_pathname.emit()
+
+        while not pathname: # wait for condition var
+            sleep(1)
+        return pathname
+
+
+class WorkDialog(QDialog):
+    ''' Dialog to display work and result '''
+
+    send_files = pyqtSignal(list)
+
+    def __init__(self, files):
+        super(WorkDialog, self).__init__()
+
+        self.progress = MyProgressBar()
+        self.progress.setRange(0, 0)
+        self.progress.set_text("Wait a minute, please...")
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok)
+        self.button_box.setEnabled(True)
+        self.create_groupbox()
+
+        self.layout = QVBoxLayout()
+        self.layout.setContentsMargins(10, 10, 10, 10)
+        self.layout.addWidget(self.form_groupbox)
+        self.layout.addWidget(self.progress)
+        self.setLayout(self.layout)
         self.setWindowTitle("Your TimeBag status")
 
+        # setup thread and worker
+        self.thread = QThread()
+        self.worker = Worker()
+        self.worker.moveToThread(self.thread)
 
-    def create_form_groupbox(self, status):
+        # signal and slot connections
+        self.send_files.connect(self.worker.real_job)
+        self.worker.request_pathname.connect(self.get_save_filename)
+        self.worker.result.connect(self.update_groupbox)
+        self.worker.finished.connect(self.thread.quit)
+        self.button_box.accepted.connect(self.accept)
+
+        # start
+        self.thread.start()
+        self.send_files.emit(files)
+
+
+
+    def get_save_filename(self):
+        ''' Ask for a filename to save new timebag '''
+
+        # explain to the user what we need
+        msg = "Please choose a name for the new TimeBag zip file.\n" \
+                "For example: 'timebag.zip'\n"
+        alert = QMessageBox()
+        alert.setText(msg)
+        alert.exec_()
+
+        # get the pathfile name
+        home = os.path.expanduser("~")
+        dialog = QFileDialog(self)
+        # DontConfirmOverwrite because is managed later and rejected
+        options = (QFileDialog.DontConfirmOverwrite)
+        filename, _ = dialog.getSaveFileName(self, "Choose a new name for your TimeBags",
+                                             home, 'Zip File (*.zip)', None, options)
+        # check if already exists
+        while os.path.exists(filename):
+            msg = "File %s already exist!\nPlease use a different name." % filename
+            alert = QMessageBox()
+            alert.setText(msg)
+            alert.exec_()
+            filename, _ = dialog.getSaveFileName(self, "Choose a new name for your TimeBags",
+                                                 home, 'Zip File (*.zip)', None, options)
+
+        # make it visible to worker thread
+        global pathname
+        pathname = filename
+
+
+    def create_groupbox(self):
         ''' Form to display the result '''
 
-        btc_blocks = []
-        for attestation in status['dat-ots'][1] + status['tst-ots'][1]:
-            btc_blocks += [attestation[0]]
+        # set empty data structure
+        self.data = dict(pathfile=QLabel(""),
+                         result=QLabel(""),
+                         tsa=QLabel(""),
+                         tst=QLabel(""),
+                         btc=QLabel(""))
+
+        # set groupbox layout
         self.form_groupbox = QGroupBox("Report")
-        tsa_url = status['dat-tst'][1]
-        tsa = QLabel("<a href=\"%s\">%s</a>" % (tsa_url, tsa_url))
-        tsa.setOpenExternalLinks(True)
         layout = QFormLayout()
-        layout.addRow(QLabel("File:"), QLabel(status['pathfile']))
-        layout.addRow(QLabel("Status:"), QLabel(status['result']))
-        layout.addRow(QLabel("Time Stamp Authority:"), tsa)
-        layout.addRow(QLabel("Time Stamped:"), QLabel(str(status['dat-tst'][0])))
-        layout.addRow(QLabel("BTC Blocks:"), QLabel(repr(sorted(set(btc_blocks)))))
+        layout.addRow(QLabel("File:"), self.data['pathfile'])
+        layout.addRow(QLabel("Status:"), self.data['result'])
+        layout.addRow(QLabel("Time Stamp Authority:"), self.data['tsa'])
+        layout.addRow(QLabel("Time Stamped (UTC):"), self.data['tst'])
+        layout.addRow(QLabel("Bitcoin Blocks:"), self.data['btc'])
         self.form_groupbox.setLayout(layout)
+
+
+    @pyqtSlot(dict)
+    def update_groupbox(self, status):
+        ''' Form to display the result '''
+
+        if status is None:
+            msg = "Some error occurred.\nSee the log file for details."
+            alert = QMessageBox()
+            alert.setText(msg)
+            alert.exec_()
+
+        else:
+            # get data
+            btc_blocks = []
+            for attestation in status['dat-ots'][1] + status['tst-ots'][1]:
+                btc_blocks += [attestation[0]]
+            tsa_url = status['dat-tst'][1]
+            tsa = "<a href=\"%s\">%s</a>" % (tsa_url, tsa_url)
+
+            # update displayed data
+            self.data['pathfile'].setText(status['pathfile'])
+            self.data['result'].setText(status['result'])
+            self.data['tsa'].setText(tsa)
+            self.data['tsa'].setOpenExternalLinks(True)
+            self.data['tst'].setText(str(status['dat-tst'][0]))
+            self.data['btc'].setText(repr(sorted(set(btc_blocks))))
+
+        self.layout.removeWidget(self.progress)
+        self.progress.deleteLater()
+        self.progress = None
+        self.layout.addWidget(self.button_box)
+
+class MyProgressBar(QProgressBar):
+    """ Progress bar in busy mode with text displayed at the center.
+        Credits: https://stackoverflow.com/questions/27564805
+    """
+
+    def __init__(self):
+        super(MyProgressBar, self).__init__()
+        self.setRange(0, 0)
+        self._text = None
+
+    def set_text(self, text):
+        ''' Set text '''
+        self._text = text
+
+    def text(self):
+        ''' Get text '''
+        return self._text
 
 
 class AboutDialog(QDialog):
@@ -169,40 +309,6 @@ class MyMainWindow(QMainWindow):
         exit_btn.triggered.connect(self.close)
         help_menu.addAction(exit_btn)
 
-    def get_save_filename(self):
-        ''' Ask for a filename to save new timebag '''
-
-        # explain to the user what we need
-        msg = "Please choose a name for the new TimeBag zip file.\n" \
-                "For example: 'timebag.zip'\n"
-        alert = QMessageBox()
-        alert.setText(msg)
-        alert.exec_()
-
-        # get the pathfile name
-        home = os.path.expanduser("~")
-        dialog = QFileDialog(self)
-        # DontConfirmOverwrite because is managed later and rejected
-        options = (QFileDialog.DontConfirmOverwrite)
-        filename, _ = dialog.getSaveFileName(self, "Choose a new name for your TimeBags",
-                                             home, 'Zip File (*.zip)', None, options)
-        # check if already exists
-        while os.path.exists(filename):
-            msg = "File %s already exist!\nPlease use a different name." % filename
-            alert = QMessageBox()
-            alert.setText(msg)
-            alert.exec_()
-            filename, _ = dialog.getSaveFileName(self, "Choose a new name for your TimeBags",
-                                                 home, 'Zip File (*.zip)', None, options)
-
-        # FIXME: This is just an ugly workaround, otherwise dialog does not close...
-        #        An experienced Qt5 programmer is welcome!
-        msg = "Press the [Ok] button below\nand wait a minute, please..."
-        alert = QMessageBox()
-        alert.setText(msg)
-        alert.exec_()
-        return filename
-
 
     def select_clicked(self):
         ''' control: Select Button on Main Window clicked'''
@@ -211,19 +317,8 @@ class MyMainWindow(QMainWindow):
         dialog = QFileDialog(self)
         files, _ = dialog.getOpenFileNames(self, None, home)
         if files:
-            # here should be opened an observer window
-            pass
-            # here the real job is done by the observed object
-            ret = core.main(files, self.get_save_filename)
-            if ret is not None:
-                dialog = ResultDialog(ret)
-                dialog.exec_()
-            else:
-                msg = "Some error occurred.\nSee the log file for details."
-                alert = QMessageBox()
-                alert.setText(msg)
-                alert.exec_()
-
+            dialog = WorkDialog(files)
+            dialog.exec_()
 
 
     def central_widget(self):
