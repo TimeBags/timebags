@@ -60,7 +60,7 @@ import tst
 import ots
 
 
-METAINF_DIR = os.path.join("META-INF", "")
+METAINF_DIR = "META-INF"
 TIMESTAMP = os.path.join("META-INF", "timestamp.tst")
 TIMESTAMP_OTS = TIMESTAMP + ".ots"
 
