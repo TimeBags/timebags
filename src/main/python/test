@@ -26,7 +26,7 @@ import settings
 import asic
 import core
 
-
+SEP = "\n\n\n#####"
 
 class TestMain(unittest.TestCase):
     ''' Test non-asic input '''
@@ -35,7 +35,7 @@ class TestMain(unittest.TestCase):
         ''' Test a regular file as single param '''
 
         name = "test"
-        msg = "##### Testing m1: regular file(%s) as single param"
+        msg = SEP + "Testing m1: regular file(%s) as single param"
         self.assertTrue(os.path.exists(name))
         ret = core.main([name])
         msg = "Ret of core.main(): %s" % repr(ret)
@@ -49,7 +49,7 @@ class TestMain(unittest.TestCase):
         ''' Test a non-existent file as single param '''
 
         name = next(tempfile._get_candidate_names()) # pylint: disable=W0212
-        msg = "##### Testing m2: non-existent file(%s) as single param" % name
+        msg = SEP + "Testing m2: non-existent file(%s) as single param" % name
         logging.info(msg)
         self.assertFalse(os.path.exists(name))
         ret = core.main([name])
@@ -61,7 +61,7 @@ class TestMain(unittest.TestCase):
         ''' Test a dir (not a regular file) as single param '''
 
         name = os.path.join("tests", "example_dir")
-        msg = "##### Testing m3: dir(%s) as single param" % name
+        msg = SEP + "Testing m3: dir(%s) as single param" % name
         logging.info(msg)
         self.assertTrue(os.path.isdir(name))
         ret = core.main([name])
@@ -76,7 +76,7 @@ class TestMain(unittest.TestCase):
         ''' Test a list of files as param '''
 
         names = glob(os.path.join("*.py"))
-        msg = "##### Testing m4: list of files(%s) as param" % names
+        msg = SEP + "Testing m4: list of files(%s) as param" % names
         logging.info(msg)
         self.assertFalse(len(names) < 2)
         ret = core.main(names)
@@ -91,7 +91,7 @@ class TestMain(unittest.TestCase):
         ''' Test one empty file as param '''
 
         name = os.path.join("tests", "empty", "data1")
-        msg = "##### Testing m5: empty file(%s) as param" % name
+        msg = SEP + "Testing m5: empty file(%s) as param" % name
         logging.info(msg)
         self.assertTrue(os.path.isfile(name))
         self.assertTrue(core.main([name]) is None)
@@ -100,7 +100,7 @@ class TestMain(unittest.TestCase):
         ''' Test two empty files as param '''
 
         names = glob(os.path.join("tests", "empty", "data*"))
-        msg = "##### Testing m6: empty files(%s) as params" % names
+        msg = SEP + "Testing m6: empty files(%s) as params" % names
         logging.info(msg)
         self.assertFalse(len(names) < 2)
         for name in names:
@@ -117,7 +117,7 @@ class TestMain(unittest.TestCase):
         ''' Test a dir of empty files as param '''
 
         name = os.path.join("tests", "empty")
-        msg = "##### Testing m7: dir of empty files(%s) as param" % name
+        msg = SEP + "Testing m7: dir of empty files(%s) as param" % name
         logging.info(msg)
         self.assertTrue(os.path.isdir(name))
         ret = core.main([name])
@@ -133,7 +133,7 @@ class TestMain(unittest.TestCase):
 
         if os.name == 'posix':
             name = os.path.join(os.sep, "dev", "tty")
-            msg = "##### Testing m8: special file(%s) as param" % name
+            msg = SEP + "Testing m8: special file(%s) as param" % name
             logging.info(msg)
             self.assertTrue(os.path.exists(name))
             self.assertFalse(os.path.isfile(name))
@@ -144,7 +144,7 @@ class TestMain(unittest.TestCase):
 
         if os.name == 'posix':
             names = glob(os.path.join(os.sep, "dev", "tty?1"))
-            msg = "##### Testing m9: special files(%s) as params" % names
+            msg = SEP + "Testing m9: special files(%s) as params" % names
             logging.info(msg)
             self.assertFalse(len(names) < 2)
             for name in names:
@@ -157,7 +157,7 @@ class TestMain(unittest.TestCase):
 
         if os.name == 'posix':
             name = os.path.join(os.sep, "dev")
-            msg = "##### Testing m10: dir of special files(%s) as param" % name
+            msg = SEP + "Testing m10: dir of special files(%s) as param" % name
             logging.info(msg)
             self.assertTrue(os.path.isdir(name))
             self.assertTrue(core.main([name]) is None)
@@ -183,7 +183,7 @@ class TestMain(unittest.TestCase):
             logging.error("Not permitted path not found")
             self.assertTrue(False)
 
-        msg = "##### Testing m11: not permitted files(%s) as param" % name
+        msg = SEP + "Testing m11: not permitted files(%s) as param" % name
         logging.info(msg)
         self.assertTrue(core.main([name]) is None)
 
@@ -195,10 +195,10 @@ class TestAsic(unittest.TestCase):
     def test_asics_notvalid(self):
         ''' Test asic-s NOT valid files '''
 
-        logging.info("##### Testing: asic-s NOT valid files asics_notvalid_*.zip")
+        logging.info(SEP + "Testing: asic-s NOT valid files asics_notvalid_*.zip")
         for filename in sorted(glob(os.path.join("tests", "asics", "asics_notvalid_*.zip"))):
             container = asic.ASiCS(filename)
-            msg = "##### Testing: file(%s) valid(%s) status(%s)" % \
+            msg = SEP + "Testing: file(%s) valid(%s) status(%s)" % \
                     (filename, str(container.valid), container.status['asic-s'])
             logging.info(msg)
             self.assertFalse(container.valid)
@@ -207,10 +207,10 @@ class TestAsic(unittest.TestCase):
     def test_asics_valid(self):
         ''' Test asic-s valid files '''
 
-        logging.info("##### Testing asic-s valid files asics_valid_*.zip")
+        logging.info(SEP + "Testing asic-s valid files asics_valid_*.zip")
         for filename in sorted(glob(os.path.join("tests", "asics", "asics_valid_*.zip"))):
             container = asic.ASiCS(filename)
-            msg = "##### Testing file(%s) valid(%s) status(%s)" % \
+            msg = SEP + "Testing file(%s) valid(%s) status(%s)" % \
                     (filename, str(container.valid), container.status['asic-s'])
             logging.info(msg)
             self.assertTrue(container.valid)
@@ -230,10 +230,10 @@ class TestAsic(unittest.TestCase):
     def test_asics_corrupted(self):
         ''' Test asic-s corrupted files '''
 
-        logging.info("##### Testing asic-s corrupted files asics_corrupted_*.zip")
+        logging.info(SEP + "Testing asic-s corrupted files asics_corrupted_*.zip")
         for filename in sorted(glob(os.path.join("tests", "asics", "asics_corrupted_*.zip"))):
             container = asic.ASiCS(filename)
-            msg = "##### Testing file(%s) corrupted(%s) status(%s)" % \
+            msg = SEP + "Testing file(%s) corrupted(%s) status(%s)" % \
                     (filename, str(container.valid), container.status['asic-s'])
             logging.info(msg)
             self.assertTrue(container.valid)
