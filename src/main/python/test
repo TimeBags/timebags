@@ -131,33 +131,36 @@ class TestMain(unittest.TestCase):
     def test_m8_main_one_special(self):
         ''' Test one special file as param '''
 
-        name = os.path.join(os.sep, "dev", "tty")
-        msg = "##### Testing m8: special file(%s) as param" % name
-        logging.info(msg)
-        self.assertTrue(os.path.exists(name))
-        self.assertFalse(os.path.isfile(name))
-        self.assertTrue(core.main([name]) is None)
+        if os.name == 'posix':
+            name = os.path.join(os.sep, "dev", "tty")
+            msg = "##### Testing m8: special file(%s) as param" % name
+            logging.info(msg)
+            self.assertTrue(os.path.exists(name))
+            self.assertFalse(os.path.isfile(name))
+            self.assertTrue(core.main([name]) is None)
 
     def test_m9_main_two_special(self):
         ''' Test many special files as param '''
 
-        names = glob(os.path.join(os.sep, "dev", "tty?1"))
-        msg = "##### Testing m9: special files(%s) as params" % names
-        logging.info(msg)
-        self.assertFalse(len(names) < 2)
-        for name in names:
-            self.assertTrue(os.path.exists(name))
-            self.assertFalse(os.path.isfile(name))
-        self.assertTrue(core.main(names) is None)
+        if os.name == 'posix':
+            names = glob(os.path.join(os.sep, "dev", "tty?1"))
+            msg = "##### Testing m9: special files(%s) as params" % names
+            logging.info(msg)
+            self.assertFalse(len(names) < 2)
+            for name in names:
+                self.assertTrue(os.path.exists(name))
+                self.assertFalse(os.path.isfile(name))
+            self.assertTrue(core.main(names) is None)
 
     def test_m10_main_dir_of_special(self):
         ''' Test a dir of special files as param '''
 
-        name = os.path.join(os.sep, "dev")
-        msg = "##### Testing m10: dir of special files(%s) as param" % name
-        logging.info(msg)
-        self.assertTrue(os.path.isdir(name))
-        self.assertTrue(core.main([name]) is None)
+        if os.name == 'posix':
+            name = os.path.join(os.sep, "dev")
+            msg = "##### Testing m10: dir of special files(%s) as param" % name
+            logging.info(msg)
+            self.assertTrue(os.path.isdir(name))
+            self.assertTrue(core.main([name]) is None)
 
     def test_m11_main_permitted(self):
         ''' Test not permitted files '''
@@ -173,7 +176,7 @@ class TestMain(unittest.TestCase):
                 name = macos_name
 
         elif os.name == 'nt':
-            # FIXME: need to set a not permitted path on Windows
+            name = os.path.join("C:", "swapfile.sys")
             pass
 
         if name is None:
@@ -182,7 +185,6 @@ class TestMain(unittest.TestCase):
 
         msg = "##### Testing m11: not permitted files(%s) as param" % name
         logging.info(msg)
-        self.assertTrue(os.path.isdir(name))
         self.assertTrue(core.main([name]) is None)
 
 
