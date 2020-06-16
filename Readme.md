@@ -14,7 +14,13 @@ See cryptography.io info to build python cryptography module
 
 # Build
 
-Use `fbs freeze` to generate executable in the `target/` folder
+
+`pip install fbs`
+
+Use `fbs freeze` to generate executable in the `target` folder
+
+Use `fbs installer` to generate macOS and win installer in the `target` folder
+
 
 # Run from source
 
