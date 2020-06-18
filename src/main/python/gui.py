@@ -275,7 +275,7 @@ class LicenseDialog(QDialog):
         layout.addWidget(license_text)
         layout.addWidget(button_box)
         self.setLayout(layout)
-        self.setWindowTitle("About")
+        self.setWindowTitle("License")
 
 
 
