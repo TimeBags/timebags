@@ -1,3 +1,4 @@
 temp/
 target/
 *.log
+appimage/*.AppImage
