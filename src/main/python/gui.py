@@ -22,7 +22,7 @@ from fbs_runtime.application_context.PyQt5 import ApplicationContext
 from PyQt5.QtWidgets import (QMainWindow, QLabel, QPushButton, QWidget, QVBoxLayout,
                              QFileDialog, QMessageBox, QDialog, QDialogButtonBox,
                              QGroupBox, QFormLayout, QAction, QPlainTextEdit,
-                             QProgressBar)
+                             QProgressBar, QSizePolicy)
 from PyQt5.QtGui import QFontDatabase, QTextCursor
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 
@@ -75,7 +75,7 @@ class WorkDialog(QDialog):
         self.progress.set_text("Wait a minute, please...")
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok)
         self.button_box.setEnabled(True)
-        self.create_groupbox()
+        self.create_groupbox(files)
 
         self.layout = QVBoxLayout()
         self.layout.setContentsMargins(10, 10, 10, 10)
@@ -128,12 +128,15 @@ class WorkDialog(QDialog):
             filename, _ = dialog.getSaveFileName(self, "Choose a new name for your TimeBags",
                                                  home, 'Zip File (*.zip)', None, options)
 
+        # update label in the groupbox
+        self.data['pathfile'].setText(filename)
+
         # make it visible to worker thread
         global pathname
         pathname = filename
 
 
-    def create_groupbox(self):
+    def create_groupbox(self, files):
         ''' Form to display the result '''
 
         # set empty data structure
@@ -142,6 +145,15 @@ class WorkDialog(QDialog):
                          tsa=QLabel(""),
                          tst=QLabel(""),
                          btc=QLabel(""))
+
+        # pathfile can be very long
+        self.data['pathfile'].setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.data['pathfile'].setMinimumWidth(300)
+        self.data['pathfile'].setWordWrap(True)
+
+        # if the selection is single file with zip extension display it
+        if len(files) == 1 and files[0].lower().endswith(".zip"):
+            self.data['pathfile'].setText(files[0])
 
         # set groupbox layout
         self.form_groupbox = QGroupBox("Report")
@@ -327,8 +339,8 @@ class MyMainWindow(QMainWindow):
         c_w = QWidget()
         c_w.resize(200, 10)
         layout = QVBoxLayout()
-        layout.addWidget(QLabel("To create or upgrade a TimeBag\n"
-                                "just use the button below!"))
+        layout.addWidget(QLabel("Create or upgrade your TimeBag " +
+                                "by clicking on the button below"))
         select = QPushButton("Select")
         select.clicked.connect(self.select_clicked)
         layout.addWidget(select)
