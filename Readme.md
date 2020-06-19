@@ -21,6 +21,7 @@ Use `fbs freeze` to generate executable in the `target` folder
 
 Use `fbs installer` to generate macOS and win installer in the `target` folder
 
+To generate AppImage for any Linux distros `cd appimage; ./build.sh`
 
 # Run from source
 
